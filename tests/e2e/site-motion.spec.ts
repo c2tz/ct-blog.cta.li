@@ -691,7 +691,19 @@ for (const route of ["/", "/posts/bienvenue-sur-ct-blog"]) {
     await expect(menu.locator('[data-theme-option="light"]')).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(menu).toBeHidden();
-    for (const detailed of [false, true]) {
+  });
+
+  // Give each display mode its own deadline: the full sequence of 18 selections
+  // can exhaust 30 seconds on WebKit even when every menu works correctly.
+  for (const detailed of [false, true]) {
+    test(`selects every theme after changing motion on ${route} (detailed: ${detailed})`, async ({
+      page,
+    }) => {
+      await gotoRoute(page, route);
+      await waitForAppReady(page);
+      const trigger = page.locator(".site-theme-trigger");
+      const menu = page.locator("#site-theme-menu");
+      const motion = page.locator(".site-motion-trigger");
       if (detailed) await page.locator(".home-detail-trigger").click();
       for (const enabled of [false, true, false]) {
         if (enabled !== ((await page.locator("html").getAttribute("data-motion")) === "on")) {
@@ -706,8 +718,8 @@ for (const route of ["/", "/posts/bienvenue-sur-ct-blog"]) {
           await expect(page.locator("html")).toHaveAttribute("data-theme-preference", theme);
         }
       }
-    }
-  });
+    });
+  }
 }
 
 for (const route of ["/", "/posts/bienvenue-sur-ct-blog"]) {

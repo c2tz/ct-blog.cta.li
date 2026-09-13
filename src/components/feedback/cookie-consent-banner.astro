@@ -27,15 +27,19 @@ import "@/assets/css/components/cookie-consent.scss";
           <div class="cookie-consent-content">
             <h4 id="explicit-content-consent-title">Avertissement +18</h4>
             <p>
-              Ce site peut inclure et proposer l'affichage de contenu : <strong
-                ><u>image d'anime explicite</u></strong
-              > ; qui n'est pas approprié pour tous les âges ou pour la consultation au travail (NSFW).
+              Ce site peut proposer, en fonction des réglages, et <strong
+                >à la demande de l'utilisateur,</strong
+              >{" "}
+              l'affichage de contenu : <strong><u>image d'anime explicite</u></strong> ; qui n'est pas
+              approprié pour tous les âges ou pour la consultation au travail (NSFW).
             </p>
             <div class="cookie-consent-age-field">
               <md-outlined-text-field
                 id="explicit-content-age"
                 name="explicit-content-age"
                 type="date"
+                required
+                no-asterisk
                 min="1900-01-01"
                 autocomplete="bday"
                 label="Date de naissance"
