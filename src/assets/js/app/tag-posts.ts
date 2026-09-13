@@ -1,6 +1,5 @@
 import { updateTableSortHeader } from "./table-sort";
 
-type TagPostsView = "list" | "table";
 type SortColumn = "created" | "title";
 type SortDirection = "asc" | "desc";
 
@@ -30,14 +29,12 @@ class SiteTagPostsElement extends HTMLElement {
   private sortColumn: SortColumn | null = null;
   private sortDirection: SortDirection = "asc";
   private tag = "all";
-  private view: TagPostsView = "list";
 
   connectedCallback() {
     if (this.hasAttribute("data-enhanced")) return;
     this.setAttribute("data-enhanced", "true");
 
     this.tag = this.getAttribute("data-tag") || "all";
-    this.view = this.getAttribute("data-view") === "table" ? "table" : "list";
     this.itemsContainer = this.querySelector<HTMLElement>("[data-tag-posts-items]");
     this.emptyRow = this.querySelector<HTMLElement>("[data-empty-row]");
     this.items = Array.from(this.querySelectorAll<HTMLElement>("[data-tag-post-item]")).map(
@@ -145,7 +142,7 @@ class SiteTagPostsElement extends HTMLElement {
   }
 
   private sortItems(items: TagPostDomItem[]) {
-    if (this.view !== "table" || !this.sortColumn) {
+    if (!this.sortColumn) {
       return [...items];
     }
 

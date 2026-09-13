@@ -269,7 +269,7 @@
   display: none;
 }
 
-body.home-page:not([data-home-detail-view="true"]) .home-anime-credit-link:not([hidden]) {
+:root:not([data-home-detail-view="true"]) body.home-page .home-anime-credit-link:not([hidden]) {
   display: none;
 }
 

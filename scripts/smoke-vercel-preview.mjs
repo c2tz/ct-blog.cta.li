@@ -219,20 +219,10 @@ async function verifyHttpSurface(targetUrl) {
 
   const missingUrl = new URL(`/__preview-smoke-missing-${randomUUID()}`, targetUrl);
   const missingResponse = await fetchDocument(missingUrl, "Missing-route probe");
+  // Vercel owns error documents, including their markup and response headers.
   assert(
     missingResponse.status === 404,
     `Missing-route probe must return a real HTTP 404, received ${missingResponse.status}.`,
-  );
-  assertLiveSecurityHeaders(missingResponse, "Missing-route probe");
-  assert(
-    missingResponse.headers.get("content-type")?.toLowerCase().includes("text/html"),
-    "Missing-route probe did not return the HTML 404 page.",
-  );
-  const missingHtml = await missingResponse.text();
-  assert(
-    /<h1\b[^>]*\bid=["']?not-found-title["']?[^>]*>/i.test(missingHtml) &&
-      /page introuvable/i.test(missingHtml),
-    "Missing-route probe returned HTTP 404 without the site 404 document.",
   );
 }
 

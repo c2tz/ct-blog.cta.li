@@ -1,5 +1,9 @@
 import { GALLERY_MOTION_DURATION_MS, fileNameFromURL, decodeImageSource } from "./support.js";
 import { areSiteAnimationsEnabled } from "../site-motion.js";
+import {
+  imagePreviewCandidateFromEvent,
+  isImagePreviewCandidate,
+} from "../image-preview-candidates.js";
 
 const waitForNextRender = () =>
   new Promise((resolve) => {
@@ -11,14 +15,7 @@ const waitForNextRender = () =>
 export const withImagePreviewGallery = (Base) =>
   class extends Base {
     getDialogImage(event) {
-      if (!(event.target instanceof Element)) return null;
-
-      const image = event.target.closest(".site-prose img");
-      if (!image?.src) return null;
-      if (image.closest("header, footer, nav, [data-no-image-dialog]")) return null;
-      if (image.closest("a[href], button, input, select, textarea")) return null;
-
-      return image;
+      return imagePreviewCandidateFromEvent(event);
     }
 
     async open(sourceImage, { restoreFocus = false } = {}) {
@@ -111,11 +108,7 @@ export const withImagePreviewGallery = (Base) =>
         activeImage.closest("[data-site-rich-tooltip]") ??
         activeImage.closest(".site-prose") ??
         document;
-      const images = [...container.querySelectorAll("img")].filter((image) => {
-        if (!image.src) return false;
-        if (image.closest("header, footer, nav, [data-no-image-dialog]")) return false;
-        return !image.closest("a[href], button, input, select, textarea");
-      });
+      const images = [...container.querySelectorAll("img")].filter(isImagePreviewCandidate);
 
       return images.length ? images : [activeImage];
     }

@@ -60,10 +60,8 @@ function enhanceDetailToggle(root: HTMLElement) {
     button.dataset.tooltip = detailed ? "Passer en mode simple" : "Passer en mode détaillé";
     if (detailed) {
       document.documentElement.dataset.homeDetailView = "true";
-      document.body.dataset.homeDetailView = "true";
     } else {
       delete document.documentElement.dataset.homeDetailView;
-      delete document.body.dataset.homeDetailView;
     }
     document.dispatchEvent(
       new CustomEvent(SITE_EVENTS.homeDetailViewChange, { detail: { detailed } }),

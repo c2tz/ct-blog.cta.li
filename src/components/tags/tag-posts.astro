@@ -6,15 +6,13 @@ import { SORT_INDICATOR_HTML } from "@/assets/js/app/table-sort";
 interface Props {
   posts: TagPostItem[];
   tag: string;
-  view?: "list" | "table";
 }
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
-const { posts, tag, view = "list" } = Astro.props;
+const { posts, tag } = Astro.props;
 const isAllPosts = tag === "all";
-const isTable = view === "table";
 const hasPagination = posts.length > PAGE_SIZE_OPTIONS[0];
-const contentId = isTable ? "tag-posts-table" : "tag-posts-list";
+const contentId = "tag-posts-table";
 const initialEnd = Math.min(PAGE_SIZE_OPTIONS[0], posts.length);
 const initialRange = posts.length === 0 ? "0 sur 0" : `1 - ${initialEnd} sur ${posts.length}`;
 const initialStatus =
@@ -27,130 +25,95 @@ const initialStatus =
       : `Articles 1 à ${initialEnd} sur ${posts.length} pour le tag ${tag}.`;
 ---
 
-<site-tag-posts data-view={view} data-tag={tag}>
-  {
-    isTable && (
-      <div class="tag-posts-table-tools">
-        <md-outlined-text-field
-          id="tag-posts-filter"
-          name="tag-posts-filter"
-          class="site-table-filter-field tag-posts-table-filter"
-          type="search"
-          label="Filtrer les articles"
-          autocomplete="off"
-          aria-controls={contentId}
-          data-tag-posts-filter
-        />
-      </div>
-    )
-  }
+<site-tag-posts data-tag={tag}>
+  <div class="tag-posts-table-tools">
+    <md-outlined-text-field
+      id="tag-posts-filter"
+      name="tag-posts-filter"
+      class="site-table-filter-field tag-posts-table-filter"
+      type="search"
+      label="Filtrer les articles"
+      autocomplete="off"
+      aria-controls={contentId}
+      data-tag-posts-filter></md-outlined-text-field>
+  </div>
 
   <p class="sr-only" role="status" aria-live="polite" aria-atomic="true" data-page-status>
     {initialStatus}
   </p>
-  {
-    isTable && (
-      <p class="sr-only" role="status" aria-live="polite" aria-atomic="true" data-sort-status />
-    )
-  }
+  <p class="sr-only" role="status" aria-live="polite" aria-atomic="true" data-sort-status></p>
 
-  {
-    isTable ? (
-      <div class="tag-posts-table-scroll" tabindex="0">
-        <table
-          id={contentId}
-          class="tag-posts-table"
-          aria-label={isAllPosts ? "Tous les articles" : `Articles du tag ${tag}`}
-        >
-          <thead>
-            <tr>
-              <th class="tag-posts-created-column" scope="col" data-sort-header="created">
-                <button
-                  type="button"
-                  class="tag-posts-sort-button"
-                  aria-label="Trier par date"
-                  data-sort-column="created"
-                >
-                  <span>Date</span>
-                  <Fragment set:html={SORT_INDICATOR_HTML} />
-                  <md-ripple />
-                </button>
-              </th>
-              <th
-                class="tag-posts-title-column tag-posts-title-header"
-                scope="col"
-                data-sort-header="title"
-              >
-                <button
-                  type="button"
-                  class="tag-posts-sort-button"
-                  aria-label="Trier par titre"
-                  data-sort-column="title"
-                >
-                  <span>Titre</span>
-                  <Fragment set:html={SORT_INDICATOR_HTML} />
-                  <md-ripple />
-                </button>
-              </th>
+  <div class="tag-posts-table-scroll" tabindex="0">
+    <table
+      id={contentId}
+      class="tag-posts-table"
+      aria-label={isAllPosts ? "Tous les articles" : `Articles du tag ${tag}`}
+    >
+      <thead>
+        <tr>
+          <th class="tag-posts-created-column" scope="col" data-sort-header="created">
+            <button
+              type="button"
+              class="tag-posts-sort-button"
+              aria-label="Trier par date"
+              data-sort-column="created"
+            >
+              <span>Date</span>
+              <Fragment set:html={SORT_INDICATOR_HTML} />
+              <md-ripple></md-ripple>
+            </button>
+          </th>
+          <th
+            class="tag-posts-title-column tag-posts-title-header"
+            scope="col"
+            data-sort-header="title"
+          >
+            <button
+              type="button"
+              class="tag-posts-sort-button"
+              aria-label="Trier par titre"
+              data-sort-column="title"
+            >
+              <span>Titre</span>
+              <Fragment set:html={SORT_INDICATOR_HTML} />
+              <md-ripple></md-ripple>
+            </button>
+          </th>
+        </tr>
+      </thead>
+      <tbody data-tag-posts-items>
+        {
+          posts.map((post, index) => (
+            <tr
+              class="tag-posts-table-row"
+              data-tag-post-item
+              data-index={index}
+              data-created={post.createdIso}
+              data-title={post.title}
+              data-search={`${post.createdLabelCompact} ${post.createdLabelFull} ${post.createdIso} ${post.title}`}
+            >
+              <td class="tag-posts-created-column">
+                <time class="post-date site-date-compact" datetime={post.createdIso}>
+                  {post.createdLabelCompact}
+                </time>
+                <time class="post-date site-date-full" datetime={post.createdIso}>
+                  {post.createdLabelFull}
+                </time>
+              </td>
+              <td class="tag-posts-title-column">
+                <a class="tag-post-title" href={post.url}>
+                  {post.title}
+                </a>
+              </td>
             </tr>
-          </thead>
-          <tbody data-tag-posts-items>
-            {posts.map((post, index) => (
-              <tr
-                class="tag-posts-table-row"
-                data-tag-post-item
-                data-index={index}
-                data-created={post.createdIso}
-                data-title={post.title}
-                data-search={`${post.createdLabelCompact} ${post.createdLabelFull} ${post.createdIso} ${post.title}`}
-              >
-                <td class="tag-posts-created-column">
-                  <time class="post-date site-date-compact" datetime={post.createdIso}>
-                    {post.createdLabelCompact}
-                  </time>
-                  <time class="post-date site-date-full" datetime={post.createdIso}>
-                    {post.createdLabelFull}
-                  </time>
-                </td>
-                <td class="tag-posts-title-column">
-                  <a class="tag-post-title" href={post.url}>
-                    {post.title}
-                  </a>
-                </td>
-              </tr>
-            ))}
-            <tr class="tag-posts-table-empty" data-empty-row hidden={posts.length > 0}>
-              <td colspan="2">Aucun article ne correspond au filtre.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    ) : (
-      <ul id={contentId} class="tag-posts" data-tag-posts-items>
-        {posts.map((post, index) => (
-          <li class="tag-post" data-tag-post-item data-index={index}>
-            <span class="tag-post-date">
-              <time class="post-date site-date-compact" datetime={post.createdIso}>
-                {post.createdLabelCompact}
-              </time>
-              <time class="post-date site-date-full" datetime={post.createdIso}>
-                {post.createdLabelFull}
-              </time>
-            </span>
-            <span class="tag-separator" aria-hidden="true">
-              ·
-            </span>
-            <a class="tag-post-title" href={post.url}>
-              {post.title}
-            </a>
-          </li>
-        ))}
-        <li class="tag-posts-list-empty" data-empty-row hidden={posts.length > 0}>
-          Aucun article à afficher.
-        </li>
-      </ul>
-    )
-  }
+          ))
+        }
+        <tr class="tag-posts-table-empty" data-empty-row hidden={posts.length > 0}>
+          <td colspan="2">Aucun article ne correspond au filtre.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 
   {
     hasPagination && (
@@ -237,7 +200,9 @@ const initialStatus =
   }
 </site-tag-posts>
 
-{isTable && <script>import "@/assets/js/material-web/tags.js";</script>}
+<script>
+  import "@/assets/js/material-web/tags.js";
+</script>
 {hasPagination && <script>import "@/assets/js/material-web/tag-pagination.js";</script>}
 
 <script>

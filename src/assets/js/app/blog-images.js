@@ -1,9 +1,6 @@
 import { hideSiteTooltip } from "./site-tooltips.js";
 import { fileNameFromURL } from "./url.js";
-
-function isDialogImageCandidate(img) {
-  return !img.closest("header, footer, nav, [data-no-image-dialog], a, button");
-}
+import { isImagePreviewCandidate } from "./image-preview-candidates.js";
 
 function setImageDialogLabel(img) {
   const filename = fileNameFromURL(img.currentSrc || img.src);
@@ -16,9 +13,8 @@ function setImageDialogLabel(img) {
 
 export function prepareBlogImageDialogs() {
   document.querySelectorAll(".site-prose").forEach((container) => {
-    container.querySelectorAll("img:not([data-no-image-dialog])").forEach((img) => {
-      if (!isDialogImageCandidate(img)) return;
-      if (!img.src) return;
+    container.querySelectorAll("img").forEach((img) => {
+      if (!isImagePreviewCandidate(img)) return;
       if (img.dataset.imageDialogPrepared === "true") {
         setImageDialogLabel(img);
         return;

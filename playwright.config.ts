@@ -1,4 +1,4 @@
-import { defineConfig, devices } from "@playwright/test";
+import { defineConfig, devices, type PlaywrightTestProject } from "@playwright/test";
 
 const PORT = 4322;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
@@ -25,86 +25,43 @@ const chromiumMobileLightTestMatch =
   /(?:image-preview-(?:core|interactions|generated|viewport)|site-(?:archive|consent|content|giscus|home-theme|loading-recovery|motion|navigation|rendering|search|search-ranking|tooltips))\.spec\.ts/;
 const chromiumMobileDarkTestMatch = /site-(?:home-theme|motion|rendering)\.spec\.ts/;
 
+const desktopViewport = { width: 1440, height: 1100 };
+const chromiumDesktop = { ...devices["Desktop Chrome"], viewport: desktopViewport };
+const chromiumMobile = { ...devices["iPhone 14"], browserName: "chromium" as const };
+const webkitDesktop = { ...devices["Desktop Safari"], viewport: desktopViewport };
+const webkitMobile = { ...devices["iPhone 14"], browserName: "webkit" as const };
+
+function themedProjects(name: string, project: PlaywrightTestProject): PlaywrightTestProject[] {
+  return (["light", "dark"] as const).map((colorScheme) => ({
+    ...project,
+    name: `${name}-${colorScheme}`,
+    use: { ...project.use, colorScheme },
+  }));
+}
+
 const nightlyProjects = nightly
   ? [
-      {
-        name: "firefox-nightly-desktop-light",
+      ...themedProjects("firefox-nightly-desktop", {
         testMatch: firefoxNightlyTestMatch,
         use: {
           ...devices["Desktop Firefox"],
-          browserName: "firefox" as const,
-          colorScheme: "light" as const,
-          viewport: { width: 1440, height: 1100 },
+          browserName: "firefox",
+          viewport: desktopViewport,
         },
-      },
-      {
-        name: "firefox-nightly-desktop-dark",
-        testMatch: firefoxNightlyTestMatch,
-        use: {
-          ...devices["Desktop Firefox"],
-          browserName: "firefox" as const,
-          colorScheme: "dark" as const,
-          viewport: { width: 1440, height: 1100 },
-        },
-      },
+      }),
       // Firefox has no phone engine. This keeps its real engine while exercising
       // the site's phone-sized, coarse-pointer responsive behavior.
-      {
-        name: "firefox-nightly-mobile-light",
+      ...themedProjects("firefox-nightly-mobile", {
         testMatch: firefoxNightlyTestMatch,
         use: {
-          browserName: "firefox" as const,
-          colorScheme: "light" as const,
+          browserName: "firefox",
           deviceScaleFactor: 2,
           hasTouch: true,
-          screen: { width: 390, height: 844 },
           viewport: { width: 390, height: 664 },
         },
-      },
-      {
-        name: "firefox-nightly-mobile-dark",
-        testMatch: firefoxNightlyTestMatch,
-        use: {
-          browserName: "firefox" as const,
-          colorScheme: "dark" as const,
-          deviceScaleFactor: 2,
-          hasTouch: true,
-          screen: { width: 390, height: 844 },
-          viewport: { width: 390, height: 664 },
-        },
-      },
-      {
-        name: "webkit-nightly-desktop-light",
-        use: {
-          ...devices["Desktop Safari"],
-          colorScheme: "light" as const,
-          viewport: { width: 1440, height: 1100 },
-        },
-      },
-      {
-        name: "webkit-nightly-desktop-dark",
-        use: {
-          ...devices["Desktop Safari"],
-          colorScheme: "dark" as const,
-          viewport: { width: 1440, height: 1100 },
-        },
-      },
-      {
-        name: "webkit-nightly-mobile-light",
-        use: {
-          ...devices["iPhone 14"],
-          browserName: "webkit" as const,
-          colorScheme: "light" as const,
-        },
-      },
-      {
-        name: "webkit-nightly-mobile-dark",
-        use: {
-          ...devices["iPhone 14"],
-          browserName: "webkit" as const,
-          colorScheme: "dark" as const,
-        },
-      },
+      }),
+      ...themedProjects("webkit-nightly-desktop", { use: webkitDesktop }),
+      ...themedProjects("webkit-nightly-mobile", { use: webkitMobile }),
     ]
   : [];
 
@@ -146,75 +103,31 @@ export default defineConfig({
       name: "desktop-light",
       testMatch: chromiumDesktopLightTestMatch,
       testIgnore: chromiumStandardTestIgnore,
-      use: {
-        ...devices["Desktop Chrome"],
-        colorScheme: "light",
-        viewport: { width: 1440, height: 1100 },
-      },
+      use: { ...chromiumDesktop, colorScheme: "light" },
     },
     {
       name: "desktop-dark",
       testMatch: chromiumDesktopDarkTestMatch,
-      use: {
-        ...devices["Desktop Chrome"],
-        colorScheme: "dark",
-        viewport: { width: 1440, height: 1100 },
-      },
+      use: { ...chromiumDesktop, colorScheme: "dark" },
     },
     {
       name: "mobile-light",
       testMatch: chromiumMobileLightTestMatch,
-      use: {
-        ...devices["iPhone 14"],
-        browserName: "chromium",
-        colorScheme: "light",
-      },
+      use: { ...chromiumMobile, colorScheme: "light" },
     },
     {
       name: "mobile-dark",
       testMatch: chromiumMobileDarkTestMatch,
-      use: {
-        ...devices["iPhone 14"],
-        browserName: "chromium",
-        colorScheme: "dark",
-      },
+      use: { ...chromiumMobile, colorScheme: "dark" },
     },
-    {
-      name: "webkit-desktop-light",
+    ...themedProjects("webkit-desktop", {
       testMatch: webkitPullRequestTestMatch,
-      use: {
-        ...devices["Desktop Safari"],
-        colorScheme: "light",
-        viewport: { width: 1440, height: 1100 },
-      },
-    },
-    {
-      name: "webkit-desktop-dark",
+      use: webkitDesktop,
+    }),
+    ...themedProjects("webkit-mobile", {
       testMatch: webkitPullRequestTestMatch,
-      use: {
-        ...devices["Desktop Safari"],
-        colorScheme: "dark",
-        viewport: { width: 1440, height: 1100 },
-      },
-    },
-    {
-      name: "webkit-mobile-light",
-      testMatch: webkitPullRequestTestMatch,
-      use: {
-        ...devices["iPhone 14"],
-        browserName: "webkit",
-        colorScheme: "light",
-      },
-    },
-    {
-      name: "webkit-mobile-dark",
-      testMatch: webkitPullRequestTestMatch,
-      use: {
-        ...devices["iPhone 14"],
-        browserName: "webkit",
-        colorScheme: "dark",
-      },
-    },
+      use: webkitMobile,
+    }),
     ...nightlyProjects,
   ],
 });

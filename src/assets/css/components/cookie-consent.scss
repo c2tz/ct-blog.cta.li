@@ -224,10 +224,6 @@ html.consent-visible body {
   margin: 0.25rem -0.5rem 0 -0.5rem;
 }
 
-.cookie-consent-actions--mobile {
-  display: none;
-}
-
 .cookie-consent--explicit-content .cookie-consent-actions {
   flex-wrap: nowrap;
   gap: 0.5rem;
@@ -290,11 +286,11 @@ html.consent-visible body {
   min-width: 4rem;
 }
 
-.cookie-consent.cookie-consent--privacy
-  .cookie-consent-actions.cookie-consent-actions--desktop
-  md-text-button {
-  --md-text-button-leading-space: 0.25rem;
-  --md-text-button-trailing-space: 0.25rem;
+@media (min-width: 431px) {
+  .cookie-consent.cookie-consent--privacy .cookie-consent-actions md-text-button {
+    --md-text-button-leading-space: 0.25rem;
+    --md-text-button-trailing-space: 0.25rem;
+  }
 }
 
 @media (min-width: 431px) and (max-width: 520px) {
@@ -302,7 +298,7 @@ html.consent-visible body {
     margin: 0.5rem;
   }
 
-  .cookie-consent--privacy .cookie-consent-actions--desktop {
+  .cookie-consent--privacy .cookie-consent-actions {
     gap: 0.75rem;
   }
 }
@@ -318,18 +314,22 @@ html.consent-visible body {
     padding: 0.875rem 0.75rem 0.5rem;
   }
 
-  .cookie-consent--privacy .cookie-consent-actions--desktop {
+  .cookie-consent--privacy .cookie-consent-details-action {
     display: none;
   }
 
-  .cookie-consent--privacy .cookie-consent-actions--mobile {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.625rem;
+  .cookie-consent--privacy .cookie-consent-actions {
     margin-inline: 0;
   }
 
-  .cookie-consent-actions--mobile :is(md-filled-button, md-filled-tonal-button, md-text-button) {
+  .cookie-consent-choice-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.625rem;
+    width: 100%;
+  }
+
+  .cookie-consent-choice-actions md-text-button {
     width: 100%;
   }
 }
