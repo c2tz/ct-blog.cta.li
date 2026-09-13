@@ -3,7 +3,6 @@ import "@/assets/js/app/site-motion-effects.js";
 import "@material/web/button/filled-button.js";
 import "@material/web/button/filled-tonal-button.js";
 import "@material/web/button/text-button.js";
-import "@material/web/dialog/dialog.js";
 import "@material/web/icon/icon.js";
 import "@material/web/iconbutton/icon-button.js";
 import "@material/web/menu/menu-item.js";

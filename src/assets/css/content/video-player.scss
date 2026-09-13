@@ -26,6 +26,13 @@
   --media-accent-color: var(--md-sys-color-primary);
 }
 
+// Media Chrome's menu hosts use important transitions inside their shadow roots.
+// Its public properties also disable those transitions when site motion is off.
+html[data-motion="off"] .site-video mux-player {
+  --media-menu-transition-in: none;
+  --media-menu-transition-out: none;
+}
+
 .site-video figcaption {
   margin-top: 0.5rem;
   color: var(--site-muted);

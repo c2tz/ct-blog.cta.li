@@ -77,6 +77,9 @@ test("switches all Material menus and search dialogs between normal and quick mo
     await expect(theme).toHaveAttribute("data-test-menu-animated", String(!quick));
     await page.keyboard.press("Escape");
     await expect(theme).toHaveJSProperty("open", false);
+    // Focus is restored at the end of closing, after open becomes false.
+    // Opening another control earlier lets that restoration close it again.
+    await expect(theme).toBeHidden();
 
     await openMaterialSelect(pageSize);
     const arrow = pageSize.locator(".site-material-select-arrow");
@@ -84,6 +87,7 @@ test("switches all Material menus and search dialogs between normal and quick mo
     await expect(arrow).toHaveCSS("transition-duration", quick ? "0s" : "0.08s");
     await page.keyboard.press("Escape");
     await expect(arrow).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 0)");
+    await expect(pageSize.locator("md-menu")).toBeHidden();
 
     await page.locator("[data-search-open]").click();
     await expect(dialog).toHaveJSProperty("open", true);
@@ -96,8 +100,10 @@ test("switches all Material menus and search dialogs between normal and quick mo
       "matrix(-1, 0, 0, -1, 0, 0)",
     );
     await page.keyboard.press("Escape");
+    await expect(sort.locator("md-menu")).toBeHidden();
     await page.getByRole("button", { name: "Fermer la recherche" }).click();
     await expect(dialog).toHaveJSProperty("open", false);
+    await expect(dialog).toBeHidden();
   }
 });
 
