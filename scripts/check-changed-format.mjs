@@ -1,21 +1,9 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const SUPPORTED_EXTENSIONS = new Set([
-  ".astro",
-  ".css",
-  ".html",
-  ".js",
-  ".json",
-  ".jsonc",
-  ".mjs",
-  ".scss",
-  ".ts",
-  ".yaml",
-  ".yml",
-]);
+import { runPrettier, selectFormattablePaths } from "./lib/changed-file-format.mjs";
 
 export const DEFAULT_FORMAT_BASE = "origin/develop";
 export const EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904";
@@ -100,11 +88,6 @@ function run(command, args) {
   });
 }
 
-function extensionOf(file) {
-  const extensionMatch = file.match(/(\.[^.]+)$/);
-  return extensionMatch?.[1] ?? "";
-}
-
 function changedFilesFrom(args, baseRef) {
   const diff = run("git", ["diff", "--name-only", "--diff-filter=ACMR", ...args]);
 
@@ -137,25 +120,19 @@ export function checkChangedFormat({
   base = formatBaseFromEnvironment(),
   shouldWrite = process.argv.includes("--write"),
 } = {}) {
-  const files = [
-    ...new Set([
-      ...changedFilesFrom(formatDiffArguments(base), base.baseRef),
-      ...changedFilesFrom([], base.baseRef),
-      ...changedFilesFrom(["--cached"], base.baseRef),
-      ...untrackedFiles(),
-    ]),
-  ].filter((file) => existsSync(file) && SUPPORTED_EXTENSIONS.has(extensionOf(file)));
+  const files = selectFormattablePaths([
+    ...changedFilesFrom(formatDiffArguments(base), base.baseRef),
+    ...changedFilesFrom([], base.baseRef),
+    ...changedFilesFrom(["--cached"], base.baseRef),
+    ...untrackedFiles(),
+  ]);
 
   if (files.length === 0) {
     console.info(`No changed files need Prettier checks against ${base.baseRef} (${base.source}).`);
     return 0;
   }
 
-  const prettier = spawnSync("prettier", [shouldWrite ? "--write" : "--check", ...files], {
-    stdio: "inherit",
-  });
-
-  return prettier.status ?? 1;
+  return runPrettier(files, { shouldWrite });
 }
 
 function main() {

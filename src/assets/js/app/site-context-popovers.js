@@ -1,5 +1,5 @@
 import { SITE_EVENTS } from "@/lib/site-contracts";
-import { positionFloatingSurface, trackFloatingSurface } from "./site-floating-surface.js";
+import { trackFloatingSurface } from "./site-floating-surface.js";
 
 const TRIGGER_SELECTOR = "[data-context-popover-trigger]";
 const FOCUSABLE_SELECTOR = [
@@ -329,10 +329,6 @@ class SiteContextPopoverController {
       }),
       trigger,
     };
-    positionFloatingSurface(surface, trigger, {
-      gap: 12,
-      placement: trigger.dataset.contextPopoverPlacement || "top",
-    });
 
     if (shouldRestorePreviewFocus) {
       queueMicrotask(() => {

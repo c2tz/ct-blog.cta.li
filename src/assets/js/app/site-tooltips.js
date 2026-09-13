@@ -473,10 +473,12 @@ class SiteTooltipController {
           gap: 6,
           placement: target.dataset.tooltipPlacement || "top",
         });
-    void floatingSurface.positionFloatingSurface(this.surface, reference, {
-      gap: point ? 8 : 6,
-      placement: target.dataset.tooltipPlacement || "top",
-    });
+    if (point) {
+      void floatingSurface.positionFloatingSurface(this.surface, reference, {
+        gap: 8,
+        placement: target.dataset.tooltipPlacement || "top",
+      });
+    }
   }
 
   hide() {

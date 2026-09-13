@@ -13,6 +13,7 @@ import {
   swipe,
   expectImageContained,
 } from "./image-preview-fixture";
+import { waitForAppReady } from "./site-fixture";
 
 test("uses the independent animation preference when lazily opening both image dialogs", async ({
   page,
@@ -84,6 +85,72 @@ test("keeps lightbox source images in the keyboard order", async ({ page }) => {
   await expect(image).toHaveAttribute("aria-haspopup", "dialog");
   await image.focus();
   await expect(image).toBeFocused();
+});
+
+test("shares image eligibility between keyboard preparation, the loader and the gallery", async ({
+  page,
+}) => {
+  const source = await page.locator(SOURCE_IMAGE_SELECTOR).first().getAttribute("src");
+  expect(source).toBeTruthy();
+  const fixtureImage = (name: string, attributes = "") =>
+    `<img src="${source}" alt="${name}" data-candidate="${name}" width="300" height="146" ${attributes}>`;
+  const fixture = [
+    `<a>${fixtureImage("anchor")}</a>`,
+    `<a href="#image-link-target">${fixtureImage("link")}</a>`,
+    `<div data-no-image-dialog>${fixtureImage("excluded-parent")}</div>`,
+    fixtureImage("excluded-image", "data-no-image-dialog"),
+    fixtureImage("plain"),
+  ].join("");
+
+  await page.route("**/posts/mdx-smoke-test", async (route) => {
+    const response = await route.fetch();
+    let replacedImages = 0;
+    const body = (await response.text()).replace(
+      /<img\b(?=[^>]*\bdata-image-dialog(?:\s|>))[^>]*>/g,
+      () => (++replacedImages === 1 ? fixture : ""),
+    );
+    expect(replacedImages).toBe(2);
+    await route.fulfill({ response, body });
+  });
+  const previewRequests: string[] = [];
+  page.on("request", (request) => {
+    if (/\/_astro\/image-preview\.[^/.]+\.js$/.test(new URL(request.url()).pathname)) {
+      previewRequests.push(request.url());
+    }
+  });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await waitForAppReady(page);
+
+  const anchorImage = page.locator('[data-candidate="anchor"]');
+  const dialog = page.locator(DIALOG_SELECTOR);
+  await expect(anchorImage).toHaveAttribute("role", "button");
+  await expect(anchorImage).toHaveAttribute("tabindex", "0");
+  await expect(page.locator('[data-candidate="plain"]')).toHaveAttribute("role", "button");
+
+  const checkExcludedImages = async () => {
+    for (const name of ["link", "excluded-parent", "excluded-image"]) {
+      const image = page.locator(`[data-candidate="${name}"]`);
+      await expect(image).not.toHaveAttribute("role");
+      await expect(image).not.toHaveAttribute("tabindex");
+      await image.click();
+      await expect(dialog).not.toHaveAttribute("open");
+    }
+    await expect(page).toHaveURL(/#image-link-target$/);
+  };
+
+  await checkExcludedImages();
+  expect(previewRequests).toEqual([]);
+  await anchorImage.focus();
+  await page.keyboard.press("Enter");
+  await expect(dialog).toHaveJSProperty("open", true);
+  expect(previewRequests).toHaveLength(1);
+  await expect(dialog.locator("[data-image-status]")).toHaveText("Image 1 sur 2 : anchor");
+  await page.keyboard.press("ArrowRight");
+  await expect(dialog.locator("[data-image-status]")).toHaveText("Image 2 sur 2 : plain");
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveJSProperty("open", false);
+  await expect(anchorImage).toBeFocused();
+  await checkExcludedImages();
 });
 
 test("opens once from the cold loader without replaying the activation event", async ({ page }) => {

@@ -29,8 +29,6 @@ const videoPreviewProxy = {
   },
 };
 
-const IMAGE_GIT_DATES_CACHE = new Map();
-
 function getLocalImageGitDates(src, markdownPath) {
   if (
     !markdownPath ||
@@ -45,11 +43,7 @@ function getLocalImageGitDates(src, markdownPath) {
   const imagePath = resolve(dirname(markdownPath), src.split(/[?#]/, 1)[0]);
   if (!existsSync(imagePath)) return null;
 
-  if (!IMAGE_GIT_DATES_CACHE.has(imagePath)) {
-    IMAGE_GIT_DATES_CACHE.set(imagePath, getFileGitDates(imagePath));
-  }
-
-  return IMAGE_GIT_DATES_CACHE.get(imagePath);
+  return getFileGitDates(imagePath);
 }
 
 function isKnownViteOxcEsbuildWarning(message) {

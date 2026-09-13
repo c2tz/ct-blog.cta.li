@@ -145,7 +145,7 @@ test("keeps consent actions uppercase and the privacy banner below the search sc
 
   await page.setViewportSize({ width: 601, height: 720 });
   await expect(detailsLink).toBeVisible();
-  const wideDesktopLayout = await measureConsentActionLayout(privacyBanner, "desktop");
+  const wideDesktopLayout = await measureConsentActionLayout(privacyBanner);
   expect(wideDesktopLayout.bannerWidth).toBeCloseTo(430, 0);
   expect(wideDesktopLayout.buttonsFit).toBe(true);
   expect(wideDesktopLayout.count).toBe(3);
@@ -158,7 +158,7 @@ test("keeps consent actions uppercase and the privacy banner below the search sc
 
   await page.setViewportSize({ width: 431, height: 720 });
   await expect(detailsLink).toBeVisible();
-  const narrowDesktopLayout = await measureConsentActionLayout(privacyBanner, "desktop");
+  const narrowDesktopLayout = await measureConsentActionLayout(privacyBanner);
   expect(narrowDesktopLayout.bannerWidth).toBeLessThanOrEqual(wideDesktopLayout.bannerWidth);
   expect(narrowDesktopLayout.bannerHeight).toBeLessThanOrEqual(wideDesktopLayout.bannerHeight + 1);
   expect(narrowDesktopLayout.buttonsFit).toBe(true);
@@ -174,13 +174,13 @@ test("keeps consent actions uppercase and the privacy banner below the search sc
   await page.setViewportSize({ width: 430, height: 720 });
   await expect(detailsLink).toBeHidden();
   await expect(privacyBanner.locator("md-text-button[href]:visible")).toHaveCount(0);
-  const mobileActions = privacyBanner.locator(".cookie-consent-actions--mobile");
+  const mobileActions = privacyBanner.locator(".cookie-consent-choice-actions");
   await expect(mobileActions.locator("md-text-button[data-cookie-action]")).toHaveCount(2);
   await expect(mobileActions.locator(":is(md-filled-button, md-filled-tonal-button)")).toHaveCount(
     0,
   );
   await expect(privacyBanner.locator("[data-cookie-action]:visible")).toHaveCount(2);
-  const compactLayout = await measureConsentActionLayout(privacyBanner, "mobile");
+  const compactLayout = await measureConsentActionLayout(privacyBanner);
   expect(compactLayout.bannerHeight).toBeLessThanOrEqual(wideDesktopLayout.bannerHeight + 1);
   expect(compactLayout.buttonsFit).toBe(true);
   expect(compactLayout.count).toBe(2);

@@ -1,5 +1,5 @@
 import { SITE_EVENTS } from "@/lib/site-contracts";
-import { positionFloatingSurface, trackFloatingSurface } from "./site-floating-surface.js";
+import { trackFloatingSurface } from "./site-floating-surface.js";
 
 const TRIGGER_SELECTOR = "[data-rich-tooltip-trigger]";
 const HOVER_OPEN_DELAY_MS = 180;
@@ -281,10 +281,6 @@ class SiteRichTooltipController {
       }),
       trigger,
     };
-    void positionFloatingSurface(surface, trigger, {
-      gap: 12,
-      placement: trigger.dataset.richTooltipPlacement || "top",
-    });
   }
 
   close() {

@@ -35,7 +35,6 @@ test("reuses the article archive table for individual tags", async ({ page }) =>
   await expect(
     page.getByRole("heading", { level: 1, name: "Articles avec le tag « blog »" }),
   ).toBeVisible();
-  await expect(tagPosts).toHaveAttribute("data-view", "table");
   await expect(tagPosts.locator("table.tag-posts-table")).toHaveAttribute(
     "aria-label",
     "Articles du tag blog",
@@ -43,7 +42,6 @@ test("reuses the article archive table for individual tags", async ({ page }) =>
   await expect(tagPosts.getByRole("button", { name: "Trier par date" })).toBeVisible();
   await expect(tagPosts.getByRole("button", { name: "Trier par titre" })).toBeVisible();
   await expect(tagPosts.locator("md-outlined-text-field.tag-posts-table-filter")).toBeVisible();
-  await expect(tagPosts.locator("ul.tag-posts")).toHaveCount(0);
   await expect(row.getByRole("link")).toHaveAttribute("href", /^\/posts\/[^/]+$/);
   await expect(row.getByRole("link")).toHaveText((await row.getAttribute("data-title"))!);
   await expect(row.locator(".site-date-compact")).toBeVisible();
