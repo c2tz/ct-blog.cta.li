@@ -117,12 +117,13 @@ explicite dans `knip.json` plutôt qu'une suppression immédiate.
 ### `pnpm check:bundles`
 
 Mesure en brut, gzip et Brotli le HTML et les ressources initiales de l'accueil, d'un article, de la
-page cookies et de la 404. Il borne aussi chaque fichier JavaScript et image AVIF 404, les totaux
-JavaScript/CSS, le moteur Pagefind et les graphes différés de recherche, d'aperçu d'image et de Konachan. Les
+page cookies. Il borne aussi chaque fichier JavaScript, les totaux JavaScript/CSS, le moteur
+Pagefind et les graphes différés de recherche, d'aperçu d'image, de vidéo et de Konachan. Les
 entrées générées sont retrouvées par leur nom stable plutôt que par leur hash, afin qu'un nouveau
 build ne fausse pas le contrôle. Les graphes différés constituent une garde de poids déterministe :
 ils peuvent partager des chunks et ne représentent pas une trace réseau incrémentale. Cette
-vérification s'exécute à la fin de `pnpm build`.
+vérification s'exécute à la fin de `pnpm build`. La page d'erreur 404 est fournie par Vercel et ne
+fait pas partie des ressources générées par le site.
 
 Le budget gzip de l'article de référence est de 36 Kio, avec ses ressources initiales ; il ne
 cumule pas le poids de tous les articles du blog. Les données de recherche Pagefind sont mesurées

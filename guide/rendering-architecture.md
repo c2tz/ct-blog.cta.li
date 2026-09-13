@@ -84,7 +84,6 @@ again before adoption. Changing the inline script requires regenerating the prod
 ### 1. Remove unconditional work
 
 - Removed sequential Lit warm-up imports.
-- Stopped bootstrapping interactive code on the bare 404 page.
 - Moved IP geolocation and Speed Insights behind their individual consent switches.
 - Made individual Speed Insights revocation remove its script and reload once whenever it
   had been inserted, including while its response is still in flight.
@@ -150,14 +149,9 @@ resolved by their stable stem and module imports, not by a checked-in content ha
 | Home                                 |  97,262 B | 21,406 B | 18,524 B |
 | Published article                    | 133,367 B | 30,667 B | 26,582 B |
 | Cookies                              |  90,552 B | 20,468 B | 17,648 B |
-| 404                                  |  53,926 B | 11,321 B |  9,669 B |
-| 404 plus largest generated AVIF      |  99,557 B | 56,964 B | 55,304 B |
 
-The selected 404 image is the largest generated AVIF across the light/dark and 960/full-size
-variants, currently `404-screen-dark.avif` at 45,631 B. The six AVIF/WebP 404 artifacts total
-334,928 B. This replaces the obsolete claim that one 404 traversal transferred roughly 1.36 MB;
-an actual browser still selects only one candidate according to format support, theme and
-viewport.
+Vercel now owns unknown-route responses. The site no longer generates a custom error document,
+illustration, stylesheet or layout mode; its bundle budgets cover generated site routes only.
 
 | Deployable surface                    |           Raw |          Gzip |        Brotli |
 | ------------------------------------- | ------------: | ------------: | ------------: |
@@ -173,8 +167,8 @@ The deferred rows recursively follow local generated-module references. The Kona
 includes the compact manifest and permanent 960 px landing image. These are deterministic
 deployment-footprint guards, not browser request traces: shared chunks can overlap between rows,
 already-cached modules are not subtracted, and Pagefind remains a separate budget. Unit tests
-cover changed hashes, HTML inclusion, all three encodings, a compressed-size failure, Pagefind,
-the selected 404 image and ambiguous generated entries. The thresholds in
+cover changed hashes, HTML inclusion, all three encodings, a compressed-size failure, Pagefind
+and ambiguous generated entries. The thresholds in
 `scripts/check-bundle-budget.mjs` retain practical headroom instead of tracking the current output
 byte for byte.
 
@@ -236,7 +230,7 @@ JavaScript totals.
 ### Cacheable CSS delivery
 
 The July 15 follow-up changed Astro from `inlineStylesheets: "always"` to `"never"` and moved
-home, post, cookies and 404 styles out of the shared entry. This preserves render-blocking CSS but
+home, post and cookies styles out of the shared entry. This preserves render-blocking CSS but
 lets hashed `/_astro/*` files use the existing one-year immutable cache.
 
 | Production output across six HTML pages |    Before |     After | Change |
@@ -247,7 +241,7 @@ lets hashed `/_astro/*` files use the existing one-year immutable cache.
 
 That July build had seven hashed stylesheets. `inlineStylesheets: "never"` controls Astro's bundled CSS
 delivery; it is not a blanket assertion that component markup or runtime code never uses an
-inline style attribute. Its initial CSS was 61,164 B on home, 46,648 B on 404, 52,598 B on cookies,
+inline style attribute. Its initial CSS was 61,164 B on home and 52,598 B on cookies,
 79,764 B on a post and 49,243 B on tags. A standalone `pnpm test:e2e` still builds its own
 production output; `verify:quality` sets
 `PLAYWRIGHT_REUSE_BUILD=1` after its explicit build so Playwright serves the validated `dist`
@@ -255,19 +249,14 @@ instead of compiling it a second time.
 
 ### Initial-route comparison
 
-| Route/state                         | Baseline requests / JS / JS gzip | Migrated requests / JS / JS gzip |                               Change |
-| ----------------------------------- | -------------------------------: | -------------------------------: | -----------------------------------: |
-| Home, fresh explicit-content notice |              43 / 38 / 127,860 B |               38 / 31 / 69,181 B |      −5 requests, −7 JS, −45.9% gzip |
-| Cookies, functionality refused      |               41 / 35 / 92,346 B |               37 / 28 / 60,698 B |      −4 requests, −7 JS, −34.3% gzip |
-| Technical MDX post, Giscus refused  |              46 / 40 / 119,025 B |               41 / 32 / 68,087 B |      −5 requests, −8 JS, −42.8% gzip |
-| Bare 404                            |               35 / 31 / 85,046 B |                      4 / 0 / 0 B | −31 requests, no external JavaScript |
+| Route/state                         | Baseline requests / JS / JS gzip | Migrated requests / JS / JS gzip |                          Change |
+| ----------------------------------- | -------------------------------: | -------------------------------: | ------------------------------: |
+| Home, fresh explicit-content notice |              43 / 38 / 127,860 B |               38 / 31 / 69,181 B | −5 requests, −7 JS, −45.9% gzip |
+| Cookies, functionality refused      |               41 / 35 / 92,346 B |               37 / 28 / 60,698 B | −4 requests, −7 JS, −34.3% gzip |
+| Technical MDX post, Giscus refused  |              46 / 40 / 119,025 B |               41 / 32 / 68,087 B | −5 requests, −8 JS, −42.8% gzip |
 
 The baseline tags route was 40 requests, 35 scripts and 96,938 B gzip. It was not captured in
 the final isolated snapshot, so this document does not claim an unmeasured route-specific gain.
-The four remaining 404 requests transfer the document and static assets. The `0 B` figure counts
-external JavaScript responses consistently with the other route measurements; two executable
-inline snippets still travel inside `404.html`. Current 404 document, stylesheet and image sizes
-are recorded in the deterministic table above rather than inferred from this older request trace.
 
 The fresh-home reduction is the primary initial-load result:
 
@@ -287,7 +276,6 @@ The fresh-home reduction is the primary initial-load result:
 | `/cookies/`, functionality refused                      |       37 |  28 | 202,436 B | 60,698 B |
 | MDX article, functionality refused                      |       41 |  32 | 223,955 B | 68,087 B |
 | Shortcode article, functionality refused                |       47 |  38 | 351,802 B | 92,617 B |
-| `404.html`                                              |        4 |   0 |       0 B |      0 B |
 
 Moving from the fresh home notice to acknowledged explicit content adds four request events, two
 JavaScript modules, 113,193 B raw and 29,284 B gzip. The compact runtime manifest carries the

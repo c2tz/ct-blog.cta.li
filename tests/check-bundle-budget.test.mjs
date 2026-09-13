@@ -58,20 +58,14 @@ async function createDistFixture(
       '<link rel="stylesheet" href="/_astro/site.Z9y8.css"><link rel="stylesheet" href="/_astro/cookies.E3r4.css">',
     scripts: '<script type="module" src="/_astro/app-A1b2.js"></script>',
   });
-  const notFoundHtml = html({
-    links:
-      '<link rel="stylesheet" href="/_astro/site.Z9y8.css"><link rel="stylesheet" href="/_astro/404.T5y6.css">',
-  });
 
   await Promise.all([
     writeFixture(distDirectory, "index.html", homeHtml),
     writeFixture(distDirectory, "posts/bienvenue-sur-ct-blog/index.html", articleHtml),
     writeFixture(distDirectory, "cookies/index.html", cookiesHtml),
-    writeFixture(distDirectory, "404.html", notFoundHtml),
     writeFixture(distDirectory, "_astro/site.Z9y8.css", "s".repeat(12)),
     writeFixture(distDirectory, "_astro/article.Q1w2.css", "a".repeat(13)),
     writeFixture(distDirectory, "_astro/cookies.E3r4.css", "c".repeat(14)),
-    writeFixture(distDirectory, "_astro/404.T5y6.css", "n".repeat(15)),
     writeFixture(distDirectory, "_astro/app-A1b2.js", 'import"./shared.H7j8.js";'),
     writeFixture(distDirectory, "_astro/shared.H7j8.js", "export const shared=1;"),
     writeFixture(
@@ -100,9 +94,6 @@ async function createDistFixture(
     writeFixture(distDirectory, "_astro/video-engine.EngineHash.js", "export const video=1;"),
     writeFixture(distDirectory, "pagefind/pagefind.js", "p".repeat(16)),
     writeFixture(distDirectory, "pagefind/wasm.fr.pagefind", "w".repeat(17)),
-    writeFixture(distDirectory, "images/404-screen-dark-960.avif", "d".repeat(18)),
-    writeFixture(distDirectory, "images/404-screen-light-960.avif", "l".repeat(19)),
-    writeFixture(distDirectory, "images/404-screen-dark.avif", "f".repeat(20)),
     writeFixture(
       distDirectory,
       "konachan-backgrounds.runtime.json",
@@ -111,7 +102,7 @@ async function createDistFixture(
     writeFixture(distDirectory, "konachan-backgrounds/42-960.webp", "k".repeat(20)),
   ]);
 
-  return { articleHtml, distDirectory, homeHtml, notFoundHtml };
+  return { articleHtml, distDirectory, homeHtml };
 }
 
 test("mesure raw, gzip et Brotli par route avec le HTML et sans dépendre des hashes", async (t) => {
@@ -187,16 +178,13 @@ test("une régression du poids du moteur vidéo dépasse son budget propre", asy
   );
 });
 
-test("sépare Pagefind, les parcours différés et l'image 404 AVIF déterministe", async (t) => {
+test("sépare Pagefind et les parcours différés", async (t) => {
   const { distDirectory } = await createDistFixture(t);
   const stats = await collectBundleStats({ distDirectory });
 
   assert.equal(stats.pagefind.rawBytes, 33);
   assert.equal(stats.pagefindRuntime.rawBytes, 33);
   assert.equal(stats.pagefindIndex.rawBytes, 0);
-  assert.equal(stats.notFoundImage.path, "images/404-screen-dark.avif");
-  assert.equal(stats.notFoundImage.rawBytes, 20);
-  assert.ok(stats.routes.notFoundWithImage.rawBytes > stats.routes.notFound.rawBytes);
   assert.deepEqual(
     stats.deferredJourneys.imagePreview.files.map(({ path }) => path),
     ["_astro/image-preview.PreviewHash.js", "_astro/preview-dependency.M3n4.js"],
@@ -427,12 +415,9 @@ test("contrôle chaque artefact même si le maximum compressé n'est pas le maxi
   await Promise.all([
     writeFixture(distDirectory, "_astro/raw-largest.Budget.js", compressible),
     writeFixture(distDirectory, "_astro/gzip-largest.Budget.js", lessCompressible),
-    writeFixture(distDirectory, "images/404-screen-dark.avif", compressible),
-    writeFixture(distDirectory, "images/404-screen-light.avif", lessCompressible),
   ]);
 
   const gzipLimit = gzipSync(Buffer.from(lessCompressible)).byteLength - 1;
-  const updatedStats = await collectBundleStats({ distDirectory });
   await assert.rejects(
     () =>
       checkBundleBudget({
@@ -446,38 +431,5 @@ test("contrôle chaque artefact même si le maximum compressé n'est pas le maxi
         distDirectory,
       }),
     /bundle JavaScript _astro\/gzip-largest\.Budget\.js \(gzip\).*dépasse/s,
-  );
-
-  await assert.rejects(
-    () =>
-      checkBundleBudget({
-        budgets: {
-          ...BUNDLE_BUDGETS,
-          notFoundImage: {
-            ...BUNDLE_BUDGETS.notFoundImage,
-            gzipBytes: gzipLimit,
-          },
-        },
-        distDirectory,
-      }),
-    /image AVIF 404 images\/404-screen-light\.avif \(gzip\).*dépasse/s,
-  );
-
-  await assert.rejects(
-    () =>
-      checkBundleBudget({
-        budgets: {
-          ...BUNDLE_BUDGETS,
-          routes: {
-            ...BUNDLE_BUDGETS.routes,
-            notFoundWithImage: {
-              ...BUNDLE_BUDGETS.routes.notFoundWithImage,
-              gzipBytes: updatedStats.routes.notFound.gzipBytes + gzipLimit,
-            },
-          },
-        },
-        distDirectory,
-      }),
-    /route 404 avec image AVIF images\/404-screen-light\.avif \(gzip\).*dépasse/s,
   );
 });

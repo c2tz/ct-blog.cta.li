@@ -24,7 +24,6 @@ const ROUTES = Object.freeze({
   article: "posts/bienvenue-sur-ct-blog/index.html",
   cookies: "cookies/index.html",
   home: "index.html",
-  notFound: "404.html",
 });
 
 const DEFERRED_ENTRY_STEMS = Object.freeze({
@@ -48,15 +47,12 @@ export const BUNDLE_BUDGETS = Object.freeze({
     // Leave room for production metadata and normal article-template changes.
     article: sizeBudget(144, 36, 32),
     cookies: sizeBudget(120, 30, 26),
-    notFound: sizeBudget(64, 16, 14),
-    notFoundWithImage: sizeBudget(112, 68, 64),
   }),
   largestJavaScript: sizeBudget(112, 32, 28),
   totalJavaScript: sizeBudget(768, 200, 176),
   totalStylesheet: sizeBudget(128, 32, 28),
   totalFonts: sizeBudget(128, 128, 128),
   pagefindRuntime: sizeBudget(256, 184, 176),
-  notFoundImage: sizeBudget(56, 57, 57),
   deferredJourneys: Object.freeze({
     search: sizeBudget(320, 88, 76),
     imagePreview: sizeBudget(160, 48, 42),
@@ -342,19 +338,6 @@ export async function collectBundleStats({ distDirectory = DEFAULT_DIST_DIRECTOR
     }),
   );
 
-  const notFoundImageCandidates = await Promise.all(
-    (await listFiles(resolve(distDirectory, "images")))
-      .filter((path) => /^404-screen-(?:dark|light)(?:-960)?\.avif$/.test(path))
-      .map(async (path) => {
-        const measured = await measureFiles(distDirectory, [`images/${path}`], measurementCache);
-        return measured.files[0];
-      }),
-  );
-  const notFoundImage = largestFile(notFoundImageCandidates);
-  if (!notFoundImage) {
-    throw new Error("No deterministic AVIF 404 image was generated.");
-  }
-
   const knownAssets = new Set(assetPaths);
   const deferredEntries = Object.fromEntries(
     Object.entries(DEFERRED_ENTRY_STEMS).map(([name, stem]) => [
@@ -425,29 +408,8 @@ export async function collectBundleStats({ distDirectory = DEFAULT_DIST_DIRECTOR
     ...sumMeasurements(pagefindRuntimeFiles),
   };
   const pagefindIndex = { files: pagefindIndexFiles, ...sumMeasurements(pagefindIndexFiles) };
-  const notFoundWithImages = await Promise.all(
-    notFoundImageCandidates.map(async (image) => ({
-      imagePath: image.path,
-      ...(await measureFiles(
-        distDirectory,
-        [...routes.notFound.files.map(({ path }) => path), image.path],
-        measurementCache,
-      )),
-    })),
-  );
-  const notFoundWithImage = notFoundWithImages.find(
-    ({ imagePath }) => imagePath === notFoundImage.path,
-  );
-  if (!notFoundWithImage) {
-    throw new Error("The selected deterministic AVIF 404 image was not measured with its route.");
-  }
-
   return {
-    routes: {
-      ...routes,
-      notFoundWithImage,
-      notFoundWithImages,
-    },
+    routes,
     largestJavaScript: largestFile(javascriptAssets),
     totalJavaScript: { ...sumMeasurements(javascriptAssets), files: javascriptAssets },
     coreJavaScript: { ...sumMeasurements(coreJavaScriptFiles), files: coreJavaScriptFiles },
@@ -456,8 +418,6 @@ export async function collectBundleStats({ distDirectory = DEFAULT_DIST_DIRECTOR
     pagefind,
     pagefindRuntime,
     pagefindIndex,
-    notFoundImage,
-    notFoundImages: notFoundImageCandidates,
     deferredJourneys,
     deferredEntries,
     initialKonachanImage,
@@ -486,7 +446,6 @@ export async function checkBundleBudget({
     ["route accueil, HTML inclus", stats.routes.home, budgets.routes.home],
     ["route article, HTML inclus", stats.routes.article, budgets.routes.article],
     ["route cookies, HTML inclus", stats.routes.cookies, budgets.routes.cookies],
-    ["route 404, HTML inclus", stats.routes.notFound, budgets.routes.notFound],
     [
       "total JavaScript applicatif hors lecteur vidéo",
       stats.coreJavaScript,
@@ -512,16 +471,6 @@ export async function checkBundleBudget({
     ...checks.flatMap(([label, actual, budget]) => collectBudgetFailures(label, actual, budget)),
     ...stats.coreJavaScript.files.flatMap((file) =>
       collectBudgetFailures(`bundle JavaScript ${file.path}`, file, budgets.largestJavaScript),
-    ),
-    ...stats.notFoundImages.flatMap((file) =>
-      collectBudgetFailures(`image AVIF 404 ${file.path}`, file, budgets.notFoundImage),
-    ),
-    ...stats.routes.notFoundWithImages.flatMap((measurement) =>
-      collectBudgetFailures(
-        `route 404 avec image AVIF ${measurement.imagePath}`,
-        measurement,
-        budgets.routes.notFoundWithImage,
-      ),
     ),
   ];
 

@@ -179,9 +179,12 @@ Copiez ensuite **le contenu** de `dist` dans la racine web configurée sur le NA
 - servir `index.html` pour les routes générées ;
 - conserver les bons types MIME pour CSS, JavaScript, JSON, XML, WebP et WOFF2 ;
 - utiliser HTTPS ;
-- servir la vraie page `404.html` avec un statut HTTP 404 ;
+- retourner un statut HTTP 404 pour les URL inexistantes via la page d'erreur du serveur ;
 - reproduire les en-têtes de sécurité et de cache utiles de `vercel.json` dans sa propre
   configuration.
+
+Le build ne fournit aucune page d'erreur personnalisée : Vercel gère les erreurs 404 sur les
+déploiements Vercel, et le serveur du NAS doit gérer les siennes.
 
 La dernière condition est importante : copier `dist` ne copie pas automatiquement les en-têtes
 Vercel. Si Synology utilise Nginx en interne, sa configuration se maintient sur le NAS et non dans ce

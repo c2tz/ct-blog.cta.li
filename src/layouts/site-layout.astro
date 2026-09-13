@@ -28,7 +28,6 @@ interface Props {
   bodyClass?: string;
   readingProgress?: boolean;
   contentEnhancements?: boolean;
-  barePage?: boolean;
   openGraph?: OpenGraphData;
   structuredData?: Record<string, unknown> | readonly Record<string, unknown>[];
 }
@@ -43,7 +42,6 @@ const {
   bodyClass,
   readingProgress = true,
   contentEnhancements,
-  barePage = false,
   openGraph,
   structuredData,
 } = Astro.props as Props;
@@ -260,28 +258,20 @@ const speedInsightsVersion = speedInsightsPackage.version;
     </script>
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="generator" content={Astro.generator} />
-    {
-      !barePage && (
-        <link
-          rel="preload"
-          href="/fonts/roboto-latin-400-700-variable.woff2?v=ed08301c0f24"
-          as="font"
-          type="font/woff2"
-          crossorigin="anonymous"
-        />
-      )
-    }
-    {
-      !barePage && (
-        <link
-          rel="preload"
-          href={`/fonts/material-symbols-rounded-subset.woff2?v=${materialSymbols.fontSha256.slice(0, 12)}`}
-          as="font"
-          type="font/woff2"
-          crossorigin="anonymous"
-        />
-      )
-    }
+    <link
+      rel="preload"
+      href="/fonts/roboto-latin-400-700-variable.woff2?v=ed08301c0f24"
+      as="font"
+      type="font/woff2"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="preload"
+      href={`/fonts/material-symbols-rounded-subset.woff2?v=${materialSymbols.fontSha256.slice(0, 12)}`}
+      as="font"
+      type="font/woff2"
+      crossorigin="anonymous"
+    />
     <link rel="icon" type="image/x-icon" href={`/favicon.ico?v=${STATIC_ASSET_VERSION}`} />
     <link
       rel="alternate"
@@ -302,7 +292,6 @@ const speedInsightsVersion = speedInsightsPackage.version;
 
   <body
     class:list={[bodyClass, { "reading-progress-disabled": !readingProgress }]}
-    data-bare-page={barePage ? "true" : undefined}
     data-reading-progress={readingProgress ? "on" : "off"}
     data-web-analytics-enabled={shouldLoadSpeedInsights ? "true" : undefined}
     data-web-analytics-route={shouldLoadSpeedInsights ? speedInsightsRoute : undefined}
@@ -350,9 +339,7 @@ const speedInsightsVersion = speedInsightsPackage.version;
           event.stopImmediatePropagation?.();
         };
 
-        const isBarePage = document.body.dataset.barePage === "true";
-
-        if (!isBarePage && !hasExplicitContentAcknowledgement()) {
+        if (!hasExplicitContentAcknowledgement()) {
           document.documentElement.classList.add(
             "interaction-disabled",
             "consent-prelock",
@@ -365,26 +352,22 @@ const speedInsightsVersion = speedInsightsPackage.version;
         }
       })();
     </script>
-    {!barePage && <CookieConsentBanner />}
-    {!barePage && <script>import "@/assets/js/app-bootstrap";</script>}
-    {
-      !barePage && (
-        <a class="skip-link" href="#main-content">
-          Aller au contenu
-        </a>
-      )
-    }
-    {!barePage && <Header />}
+    <CookieConsentBanner />
+    <script>
+      import "@/assets/js/app-bootstrap";
+    </script>
+    <a class="skip-link" href="#main-content"> Aller au contenu </a>
+    <Header />
     <main id="main-content" class="site-main" tabindex="-1">
       <div class="site-content">
         <slot name="content" />
       </div>
     </main>
-    {!barePage && <Footer />}
-    {!barePage && <PageLoadingIndicator />}
-    {!barePage && <SiteTooltip />}
-    {!barePage && shouldEnhanceContent && <ImagePreview />}
-    {!barePage && readingProgress && <ScrollTopButton />}
+    <Footer />
+    <PageLoadingIndicator />
+    <SiteTooltip />
+    {shouldEnhanceContent && <ImagePreview />}
+    {readingProgress && <ScrollTopButton />}
     {shouldEnhanceContent && <script>import "@/assets/js/content-enhancements.js";</script>}
   </body>
 </html>

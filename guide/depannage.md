@@ -194,8 +194,9 @@ Un workflow GitHub vert ne garantit pas que l'alias de production pointe déjà 
 ## Le déploiement Synology affiche des 404
 
 Vérifiez que vous avez copié le **contenu** de `dist`, pas le dossier source du dépôt. Configurez le
-serveur pour les routes avec répertoires et `index.html`, et testez aussi le vrai statut de
-`404.html`. Vérifiez les types MIME et les permissions de lecture.
+serveur pour les routes avec répertoires et `index.html`, et vérifiez qu'une URL inexistante renvoie
+un statut HTTP 404. Le build ne contient pas de page d'erreur personnalisée : le serveur gère cette
+réponse, comme Vercel sur les déploiements Vercel. Vérifiez les types MIME et les permissions de lecture.
 
 ## Quand demander de l'aide
 

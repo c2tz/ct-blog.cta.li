@@ -131,7 +131,7 @@ test("defaults application, dependency, test, script, asset, and unknown paths t
     "pnpm-lock.yaml",
     "scripts/classify-ci-lane.mjs",
     "tests/classify-ci-lane.test.mjs",
-    "public/images/404-screen-dark.avif",
+    "public/illustration.avif",
     "unexpected.file",
     "../outside.md",
     "/absolute/README.md",
