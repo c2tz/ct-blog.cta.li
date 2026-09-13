@@ -328,6 +328,53 @@ test("keyboard page shortcuts preserve search editing and the modal boundary", a
   await expectKeyboardRing(page.locator("[data-search-open]"));
 });
 
+test("unavailable dynamic color stays dimmed throughout menu opening", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("home-detail-view-v1", "true");
+    localStorage.removeItem("site-material-dynamic-color-palette-v1");
+  });
+  await gotoRoute(page, "/posts/bienvenue-sur-ct-blog");
+  await waitForNativeEnhancement(page, "[data-theme-switcher]");
+  const trigger = page.locator(".site-theme-trigger");
+  const row = page.locator("[data-dynamic-color-option]");
+  await expect(row).toHaveAttribute("disabled", "");
+  await expect(row).not.toHaveAttribute("hidden", "");
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    // Sample every frame from the opening event, including Material's fade-in.
+    const openingSamples = page.evaluate(
+      () =>
+        new Promise<number[]>((resolve) => {
+          const menu = document.querySelector(".site-theme-menu")!;
+          const option = document.querySelector("[data-dynamic-color-option]")!;
+          const copy = option.querySelector(".site-theme-dynamic-color-copy")!;
+          menu.addEventListener(
+            "opening",
+            () => {
+              const start = performance.now();
+              const samples: number[] = [];
+              const sample = () => {
+                samples.push(
+                  Number(getComputedStyle(option).opacity) * Number(getComputedStyle(copy).opacity),
+                );
+                if (performance.now() - start < 600) requestAnimationFrame(sample);
+                else resolve(samples);
+              };
+              requestAnimationFrame(sample);
+            },
+            { once: true },
+          );
+        }),
+    );
+    await trigger.click();
+    const samples = await openingSamples;
+    expect(samples.length).toBeGreaterThan(2);
+    expect(Math.max(...samples)).toBeLessThanOrEqual(0.31);
+    await page.keyboard.press("Escape");
+    await expect(page.locator(".site-theme-menu")).toBeHidden();
+  }
+});
+
 test("keyboard theme navigation includes dynamic color and restores focus", async ({ page }) => {
   await gotoRoute(page, "/");
   await waitForAppReady(page);
@@ -823,11 +870,14 @@ test("uses the Material Web pagination menu with keyboard selection", async ({ p
           .trim();
         return {
           primary: focusOutline === primary,
-          radius: styles.getPropertyValue("--md-outlined-text-field-container-shape").trim(),
         };
       }),
     )
-    .toEqual({ primary: true, radius: "28px" });
+    .toEqual({ primary: true });
+  await expect(tableFilter.locator("md-outlined-field .container")).toHaveCSS(
+    "border-top-left-radius",
+    "4px",
+  );
   await expect(pageSizeSelect).toHaveAttribute("id", /material-table-\d+-page-size/);
   await expect(pageSizeSelect).toHaveAttribute("name", /material-table-\d+-page-size/);
   await expect(pageSizeSelect).toHaveAttribute("menu-positioning", "popover");
@@ -850,11 +900,7 @@ test("uses the Material Web pagination menu with keyboard selection", async ({ p
     .toBe(true);
   await openMaterialSelect(pageSizeSelect);
   const initialPageSize = pageSizeSelect.locator("md-select-option").first();
-  await expect(initialPageSize).toHaveAttribute("data-selected-option", "");
-  await expect(initialPageSize.locator(".site-material-menu-check")).toHaveCSS(
-    "visibility",
-    "visible",
-  );
+  await expect(initialPageSize.getByRole("option")).toHaveAttribute("aria-selected", "true");
   // Quick motion can close before an unawaited evaluate has installed a listener.
   await pageSizeSelect.evaluate((select) => {
     select.addEventListener("closed", () => select.setAttribute("data-test-closed", "true"), {
@@ -867,10 +913,12 @@ test("uses the Material Web pagination menu with keyboard selection", async ({ p
   await expect
     .poll(() => pageSizeSelect.evaluate((select) => String((select as HTMLInputElement).value)))
     .toBe("10");
-  await expect(pageSizeSelect.locator("[data-selected-option]")).toHaveCount(1);
-  await expect(initialPageSize.locator(".site-material-menu-check")).toHaveCSS(
-    "visibility",
-    "hidden",
+  await expect(
+    pageSizeSelect.getByRole("option", { selected: true, includeHidden: true }),
+  ).toHaveCount(1);
+  await expect(initialPageSize.getByRole("option", { includeHidden: true })).toHaveAttribute(
+    "aria-selected",
+    "false",
   );
   await expect
     .poll(() =>

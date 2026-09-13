@@ -11,8 +11,9 @@ import "@/assets/css/content/footnotes.scss";
 import "@/assets/css/content/material-shortcodes.scss";
 import "@/assets/css/content/post-meta.scss";
 import "@/assets/css/content/prose.scss";
+import "@/assets/css/content/video-player.scss";
 import { isListedBlogPost } from "@/lib/blog-posts";
-import { getContentEntryGitDates } from "@/lib/git-dates.mjs";
+import { getContentEntryGitDates, hasDistinctModification } from "@/lib/git-dates.mjs";
 import { createTitleSortRanks } from "@/lib/search-title-order.mjs";
 import { SITE_GISCUS_CONFIG } from "@/site-config";
 
@@ -102,7 +103,7 @@ const postStructuredData = {
         </time>
         <time
           datetime={lastModified}
-          data-pagefind-meta="modified[datetime]"
+          data-pagefind-meta={hasDistinctModification(gitDates) ? "modified[datetime]" : undefined}
           data-pagefind-sort="modified[datetime]"
         >
           {lastModified}
