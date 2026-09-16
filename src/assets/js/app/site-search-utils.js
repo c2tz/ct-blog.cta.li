@@ -1,7 +1,3 @@
-export function isDedicationQuery(query) {
-  return query.trim().normalize("NFD").replace(/\p{M}/gu, "").toLowerCase() === "nathanaelle";
-}
-
 export function isPublicSearchResultUrl(value) {
   if (typeof value !== "string" || !value) return false;
 
