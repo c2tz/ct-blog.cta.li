@@ -131,7 +131,7 @@ test("defaults application, dependency, test, script, asset, and unknown paths t
     "pnpm-lock.yaml",
     "scripts/classify-ci-lane.mjs",
     "tests/classify-ci-lane.test.mjs",
-    "public/images/404-screen-dark.avif",
+    "public/illustration.avif",
     "unexpected.file",
     "../outside.md",
     "/absolute/README.md",
@@ -665,7 +665,7 @@ test("keeps all required check names aligned and every external action pinned by
   }
 
   const usesPattern = /^\s*uses:\s*(\S+)/gm;
-  for (const path of allWorkflowFiles) {
+  for (const path of [...allWorkflowFiles, ".github/actions/setup-project/action.yml"]) {
     const text = readFileSync(path, "utf8");
     for (const match of text.matchAll(usesPattern)) {
       const reference = match[1];
@@ -674,4 +674,41 @@ test("keeps all required check names aligned and every external action pinned by
       }
     }
   }
+});
+
+test("shared project setup preserves locked installs and the preview lifecycle-script restriction", (t) => {
+  const action = readFileSync(".github/actions/setup-project/action.yml", "utf8");
+  const run = action
+    .split("      run: |\n")[1]
+    .split("\n")
+    .map((line) => line.slice(8))
+    .join("\n");
+  const directory = mkdtempSync(join(tmpdir(), "ct-blog-setup-project-"));
+  t.after(() => rmSync(directory, { force: true, recursive: true }));
+  const pnpm = join(directory, "pnpm");
+  writeFileSync(pnpm, '#!/bin/sh\nprintf "%s\\n" "$@"\n');
+  chmodSync(pnpm, 0o755);
+  for (const ignoreScripts of ["false", "true"]) {
+    const result = spawnSync("bash", ["-c", run], {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        IGNORE_SCRIPTS: ignoreScripts,
+        PATH: `${directory}:${process.env.PATH}`,
+      },
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(result.stdout.trim().split("\n"), [
+      "install",
+      "--frozen-lockfile",
+      ...(ignoreScripts === "true" ? ["--ignore-scripts"] : []),
+    ]);
+  }
+  const smoke = readFileSync(".github/workflows/vercel-preview-smoke.yml", "utf8");
+  assert.match(
+    smoke,
+    /uses: \.\/\.github\/actions\/setup-project\s+with:\s+ignore-scripts: "true"/,
+  );
+  assert.match(smoke, /ref: \$\{\{ github\.event\.repository\.default_branch \}\}/);
+  assert.match(smoke, /persist-credentials: false/);
 });

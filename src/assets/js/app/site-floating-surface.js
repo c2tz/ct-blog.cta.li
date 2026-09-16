@@ -74,7 +74,6 @@ export function trackFloatingSurface(surface, reference, options) {
     layoutShift: true,
   });
 
-  update();
   return () => {
     updateTokens.set(surface, (updateTokens.get(surface) ?? 0) + 1);
     cleanup();

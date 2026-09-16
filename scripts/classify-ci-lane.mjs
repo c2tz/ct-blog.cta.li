@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { runPrettier, selectFormattablePaths } from "./lib/changed-file-format.mjs";
 
 export const CI_LANES = Object.freeze({
   docs: "docs",
@@ -36,21 +37,6 @@ const DOCUMENTATION_PATHS = [
 ];
 
 const CONTENT_PATHS = [/^LICENSE(?:\.[^/]+)?$/i, /^src\/content\/.+\.(?:md|mdx)$/i];
-
-const PRETTIER_DOCUMENT_EXTENSIONS = new Set([
-  ".css",
-  ".html",
-  ".js",
-  ".json",
-  ".jsonc",
-  ".md",
-  ".mdx",
-  ".mjs",
-  ".scss",
-  ".ts",
-  ".yaml",
-  ".yml",
-]);
 
 function normalizedPath(value) {
   if (typeof value !== "string" || !value || value.includes("\0") || value.includes("\\")) {
@@ -484,26 +470,13 @@ function checkDocsFormat(classification) {
     throw new Error("Git found whitespace errors in the documentation changes.");
   }
 
-  const existingPaths = [...new Set(classification.paths)].filter((path) => {
-    if (!existsSync(path)) {
-      return false;
-    }
-    if (/^README$/i.test(path)) {
-      return true;
-    }
-
-    const extension = path.match(/(\.[^./]+)$/)?.[1]?.toLowerCase();
-    return extension ? PRETTIER_DOCUMENT_EXTENSIONS.has(extension) : false;
-  });
+  const existingPaths = selectFormattablePaths(classification.paths);
   if (existingPaths.length === 0) {
     console.info("No remaining documentation files need Prettier validation.");
     return;
   }
 
-  const prettier = spawnSync("prettier", ["--check", ...existingPaths], {
-    stdio: "inherit",
-  });
-  if (prettier.status !== 0) {
+  if (runPrettier(existingPaths) !== 0) {
     throw new Error("Prettier rejected one or more changed documentation files.");
   }
 }

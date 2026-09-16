@@ -1,14 +1,8 @@
+import { imagePreviewCandidateFromEvent } from "./image-preview-candidates.js";
+
 let controllerPromise;
 let controllerReady = false;
 let installed = false;
-
-function previewImageFromEvent(event) {
-  const candidate = event.composedPath().find((node) => node instanceof HTMLImageElement);
-  if (!candidate?.src || !candidate.closest(".site-prose")) return null;
-  if (candidate.closest("header, footer, nav, [data-no-image-dialog]")) return null;
-  if (candidate.closest("a[href], button, input, select, textarea")) return null;
-  return candidate;
-}
 
 function removeWarmListeners() {
   document.removeEventListener("pointerover", warmController, true);
@@ -31,13 +25,13 @@ function loadController() {
 }
 
 function warmController(event) {
-  if (previewImageFromEvent(event)) void loadController().catch(() => undefined);
+  if (imagePreviewCandidateFromEvent(event)) void loadController().catch(() => undefined);
 }
 
 async function replayActivation(event) {
   if (controllerReady) return;
 
-  const image = previewImageFromEvent(event);
+  const image = imagePreviewCandidateFromEvent(event);
   if (!image) return;
   if (event.type === "keydown" && event.key !== "Enter" && event.key !== " ") return;
 

@@ -38,7 +38,7 @@ const tagPosts = posts.map(toTagPostItem);
   <Fragment slot="content">
     <section aria-labelledby="tag-posts-title">
       <h1 id="tag-posts-title">{pageTitle}</h1>
-      <TagPosts posts={tagPosts} tag={tag} view="table" />
+      <TagPosts posts={tagPosts} tag={tag} />
     </section>
   </Fragment>
 </Layout>

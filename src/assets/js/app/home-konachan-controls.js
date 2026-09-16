@@ -44,9 +44,7 @@ export async function initHomeKonachanControlsFromDocument() {
   const optionItems = [...(picker?.querySelectorAll("[data-konachan-rating-option]") ?? [])];
   let revealTimer = 0;
   let menuOpen = false;
-  let detailed =
-    document.documentElement.dataset.homeDetailView === "true" ||
-    document.body.dataset.homeDetailView === "true";
+  let detailed = document.documentElement.dataset.homeDetailView === "true";
 
   const readPreference = () => {
     let value = null;

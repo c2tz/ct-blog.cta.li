@@ -40,16 +40,6 @@ function initConditionalEnhancements() {
   );
 }
 
-function syncDetailViewBodyState() {
-  if (!document.body) return;
-
-  if (document.documentElement.dataset.homeDetailView === "true") {
-    document.body.dataset.homeDetailView = "true";
-  } else {
-    delete document.body.dataset.homeDetailView;
-  }
-}
-
 async function initProseImageEnhancements() {
   const hasProseImage = document.querySelector(".site-prose img");
   if (!hasProseImage) return;
@@ -59,7 +49,6 @@ async function initProseImageEnhancements() {
 }
 
 function initApp() {
-  syncDetailViewBodyState();
   initKeyboardNavigation();
   initSiteTooltips();
   initConditionalEnhancements();

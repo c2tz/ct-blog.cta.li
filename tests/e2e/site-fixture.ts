@@ -204,10 +204,10 @@ export async function expectKeyboardFocusOverridesPendingPointerFrame(dialog: Lo
   });
 }
 
-export async function measureConsentActionLayout(banner: Locator, variant: "desktop" | "mobile") {
-  return banner.evaluate((element, actionVariant) => {
+export async function measureConsentActionLayout(banner: Locator) {
+  return banner.evaluate((element) => {
     const bannerRect = element.getBoundingClientRect();
-    const actions = element.querySelector(`.cookie-consent-actions--${actionVariant}`);
+    const actions = element.querySelector(".cookie-consent-actions");
     const buttons = actions
       ? Array.from(actions.querySelectorAll("[data-cookie-action], md-text-button[href]")).filter(
           (button) => {
@@ -250,7 +250,7 @@ export async function measureConsentActionLayout(banner: Locator, variant: "desk
       right: bannerRect.right,
       viewportWidth: window.innerWidth,
     };
-  }, variant);
+  });
 }
 
 export const test = base.extend({

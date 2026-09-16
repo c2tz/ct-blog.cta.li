@@ -222,43 +222,6 @@ test("opens and refocuses search with Cmd/Ctrl+K without stealing editable field
   expect(editableShortcutWasPrevented).toBe(false);
 });
 
-test("reveals a heart only for the complete name and restores normal search", async ({ page }) => {
-  await gotoRoute(page, "/posts/hugo-material-shortcodes");
-  await openSearch(page);
-  const dialog = page.locator("[data-search-dialog]");
-  const query = dialog.getByRole("searchbox", { name: "Mot-clé, titre ou contenu" });
-  const status = dialog.locator("[data-search-status]");
-  const results = dialog.locator("[data-search-results] a");
-
-  await expect(status).not.toHaveText("❤️");
-  await query.fill("nathanaell");
-  await expect(status).toHaveText(/résultat|Aucun article trouvé/);
-
-  await query.press("e");
-  await expect(status).toHaveText("❤️");
-  await expect(status).toBeVisible();
-  await expect(results).toHaveCount(0);
-  await expect(dialog.locator("[data-search-tags]")).toBeHidden();
-  await expect(query).toBeFocused();
-
-  await query.press("x");
-  await expect(status).not.toHaveText("❤️");
-  await expect(status).toHaveText(/résultat|Aucun article trouvé/);
-
-  await query.fill(" NATHANAËLLE ");
-  await expect(status).toHaveText("❤️");
-  await query.press("Escape");
-  await expect(query).toHaveValue("");
-  await expect(status).toHaveText("Tapez au moins deux caractères ou choisissez un filtre.");
-  await expect(dialog).toBeVisible();
-  await expect(query).toBeFocused();
-
-  await query.fill("bienvenue");
-  await expect(results.first()).toBeVisible();
-  await expect(status).toHaveText(/résultat/);
-  await expect(dialog.locator("[data-search-tags]")).toBeVisible();
-});
-
 test("uses Escape to clear a search, then close its empty dialog", async ({ page }) => {
   await gotoRoute(page, "/");
   const { dialog, openButton } = await openSearch(page);

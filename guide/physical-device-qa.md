@@ -21,7 +21,8 @@ The `Smoke Vercel preview deployment` workflow can also be run manually with a p
 the repository variable `VERCEL_PREVIEW_SMOKE_ENABLED` is exactly `true`. Keep that variable unset
 while Vercel Deployment Protection redirects anonymous requests to SSO: a protected preview cannot
 be truthfully validated without a bypass credential, and the workflow deliberately uses no secret.
-The smoke verifies the live document/security headers and real 404, then fetches one emitted Astro
+The smoke verifies the live site document/security headers and Vercel's HTTP 404 status for unknown
+routes, then fetches one emitted Astro
 stylesheet, the compact 150-image Konachan manifest and one WebP variant to prove their MIME,
 cache policy, size and payload contracts on the deployed origin.
 
@@ -43,7 +44,7 @@ cache policy, size and payload contracts on the deployed origin.
   must keep its viewport anchor without jumping at an animation boundary.
   Release a dismissal drag with motion enabled: the image must not recenter and the scrim must
   continue fading instead of returning to its initial opacity.
-- Visit a deliberately unknown URL and confirm the branded 404 page is shown with an HTTP 404 in
+- Visit a deliberately unknown URL and confirm Vercel's default error page returns HTTP 404 in
   remote Web Inspector or DevTools.
 
 ## Safari on macOS

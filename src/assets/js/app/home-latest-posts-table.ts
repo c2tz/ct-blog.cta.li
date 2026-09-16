@@ -44,9 +44,7 @@ class HomeLatestPostsTableElement extends HTMLElement {
     }
     document.addEventListener(SITE_EVENTS.homeDetailViewChange, this.handleDetailViewChange);
 
-    this.detailed =
-      document.documentElement.dataset.homeDetailView === "true" ||
-      document.body.dataset.homeDetailView === "true";
+    this.detailed = document.documentElement.dataset.homeDetailView === "true";
     this.syncDetailedPresentation();
     this.updateSortPresentation();
 

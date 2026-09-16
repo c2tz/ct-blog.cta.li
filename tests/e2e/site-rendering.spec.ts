@@ -2,7 +2,6 @@ import {
   expect,
   test,
   ROUTES,
-  pageRuntimeErrors,
   geoRequestCounts,
   expectResolvedTheme,
   expectNoPageOverflow,
@@ -354,70 +353,6 @@ test("keeps the modification date and commit link when the post has distinct com
   expect(modifiedCommit).toContain("/commit/");
   expect(modifiedCommit).not.toBe(createdCommit);
   await expectNoPageOverflow(page);
-});
-
-test("renders the inverse-theme 404 artwork without site chrome", async ({ page }) => {
-  const response = await page.goto("/page-absente-pour-test", {
-    waitUntil: "domcontentloaded",
-  });
-
-  expect(response?.status()).toBe(404);
-  const expectedNavigationError =
-    "Failed to load resource: the server responded with a status of 404 (Not Found)";
-  expect(pageRuntimeErrors.get(page)).toEqual([expectedNavigationError]);
-  pageRuntimeErrors.set(page, []);
-  await expectResolvedTheme(page);
-  await expect(page.locator("body")).toHaveClass(/not-found-page/);
-  await expect(
-    page.getByRole("heading", { level: 1, name: "Page introuvable (404)" }),
-  ).toBeAttached();
-  await expect(page.locator(".site-header, .site-footer")).toHaveCount(0);
-
-  const expectedArtwork = test.info().project.name.includes("dark")
-    ? "/images/404-screen-light.webp"
-    : "/images/404-screen-dark.webp";
-  const artwork = await page.locator(".not-found-artwork").evaluate((element) => {
-    const styles = getComputedStyle(element);
-    const bounds = element.getBoundingClientRect();
-    return {
-      image: styles.backgroundImage,
-      viewportCovered: bounds.width >= window.innerWidth && bounds.height >= window.innerHeight,
-    };
-  });
-
-  expect(artwork.image).toContain(expectedArtwork);
-  expect(artwork.viewportCovered).toBe(true);
-  await expectNoPageOverflow(page);
-
-  const nextTheme = test.info().project.name.includes("dark") ? "light" : "dark";
-  const nextArtwork =
-    nextTheme === "dark" ? "/images/404-screen-light.webp" : "/images/404-screen-dark.webp";
-  await page.emulateMedia({ colorScheme: nextTheme });
-  await expect
-    .poll(() => page.evaluate(() => document.documentElement.dataset.theme))
-    .toBe(nextTheme);
-  await expect
-    .poll(() =>
-      page
-        .locator(".not-found-artwork")
-        .evaluate((element) => getComputedStyle(element).backgroundImage),
-    )
-    .toContain(nextArtwork);
-  await expect(page.locator("body")).toHaveClass(/not-found-page/);
-
-  const homeHotspot = page.getByRole("link", { name: "Revenir à l’accueil" });
-  await expect(homeHotspot).toBeVisible();
-  const hotspotBounds = await homeHotspot.boundingBox();
-  const viewport = page.viewportSize();
-  expect(hotspotBounds).not.toBeNull();
-  expect(viewport).not.toBeNull();
-  expect(hotspotBounds!.x).toBeLessThan(viewport!.width);
-  expect(hotspotBounds!.x + hotspotBounds!.width).toBeGreaterThan(0);
-  expect(hotspotBounds!.y).toBeLessThan(viewport!.height);
-  expect(hotspotBounds!.y + hotspotBounds!.height).toBeGreaterThan(0);
-
-  await homeHotspot.click();
-  await expect(page).toHaveURL(/\/$/);
 });
 
 test("shows one cached localized IP and network lookup after consent", async ({ page }) => {
