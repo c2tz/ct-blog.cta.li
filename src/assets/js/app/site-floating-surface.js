@@ -37,6 +37,9 @@ export async function positionFloatingSurface(
       size({
         padding: VIEWPORT_MARGIN,
         apply({ availableHeight, availableWidth, elements }) {
+          // Sizing runs inside the asynchronous calculation, before the final
+          // result guard. Closing or reopening the surface invalidates it too.
+          if (updateTokens.get(surface) !== token || !surface.isConnected) return;
           elements.floating.style.setProperty(
             "--site-floating-available-width",
             `${Math.max(0, availableWidth)}px`,
