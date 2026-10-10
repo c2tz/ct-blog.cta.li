@@ -45,8 +45,8 @@ reconstruit pas le site automatiquement.
 
 ### `pnpm preview:local`
 
-Variante utilisée par les tests, sur `127.0.0.1:4322`. Le port distinct évite une collision avec le
-serveur de développement.
+Prévisualisation manuelle sur `127.0.0.1:4322`. Le port distinct évite une collision avec le
+serveur de développement. Libérez ce port avant de lancer Playwright, qui démarre son propre serveur.
 
 ## Construction du site
 
@@ -144,6 +144,16 @@ Playwright construit le site avec `build:test`, le sert sur le port 4322 et pilo
 configuration normale couvre plusieurs tailles d'écran, les thèmes clair/sombre, Chromium et des
 parcours ciblés WebKit. Les captures et traces sont conservées lors d'un échec.
 
+Un test qui réussit seulement après une relance automatique rend aussi la commande échouée.
+Le verdict local reste ainsi cohérent avec la CI nocturne : examiner la trace du premier échec
+avant de considérer le scénario comme validé.
+
+Le serveur de tests utilise l'API publique `preview()` d'Astro et conserve la configuration du
+projet. Il reste au premier plan même dans un environnement d'agent, où la CLI Astro peut lancer
+automatiquement un serveur détaché. Playwright garde ainsi la maîtrise de sa durée de vie. Le
+port 4322 doit être libre (aucun basculement silencieux sur un autre port) et SIGINT/SIGTERM ferment
+le serveur. Un échec de démarrage produit un code de sortie non nul.
+
 La matrice Chromium évite le produit cartésien complet : le profil bureau clair exécute toutes les
 specs non nocturnes, le bureau sombre conserve les specs qui vérifient explicitement les thèmes, le
 mobile clair conserve les parcours responsive, tactiles ou critiques sur téléphone, et le mobile
@@ -193,9 +203,11 @@ Permettent d'exécuter un seul des deux profils. Les rapports sont écrits dans
 
 ### `pnpm audit:dependencies`
 
-Interroge l'audit pnpm et échoue à partir d'une vulnérabilité de niveau faible. Une alerte doit être
-analysée selon la version, le chemin de dépendance et l'exposition réelle ; ne supprimez pas une
-bibliothèque au hasard pour faire disparaître le message.
+Interroge l'audit pnpm et conserve son rapport brut et sa synthèse dans `reports/dependency-audit.*`.
+Les avis sont bloquants dès le niveau faible, sauf les exceptions temporaires strictement limitées
+dans `dependency-audit-policy.json`. Leur exposition, échéance et absence de correctif publié sont
+vérifiées ; les erreurs réseau restent bloquantes. Voir [Dépendances](dependances.md#diagnostiquer-un-audit)
+pour le diagnostic. `pnpm audit --audit-level low` affiche le verdict sans cette politique.
 
 ### `pnpm check:content`
 
@@ -314,15 +326,22 @@ existent, car ils ajoutent les contrôles nécessaires autour d'Astro.
 
 ## Commandes agrégées
 
+### `pnpm verify:quality:static`
+
+Exécute les tests unitaires, le thème, Astro/TypeScript, ESLint, la police d'icônes, Knip, Prettier,
+le build de test et les en-têtes de sécurité. Le job qualité de GitHub Actions utilise cette commande
+et partage le build obtenu avec les huit shards Playwright. L'audit s'exécute dans un job distinct.
+
 ### `pnpm verify:quality`
 
-Exécute en série : tests unitaires, thème, Astro/TypeScript, ESLint, audit de dépendances, police
-d'icônes, Knip, Prettier, build, en-têtes de sécurité et tests Playwright. GitHub Actions utilise
-cette commande dans son job principal.
+Exécute les contrôles statiques, l'audit puis Playwright, avec un résumé des résultats. L'audit est
+tenté même après un échec statique. Un audit rouge n'empêche pas les tests navigateur ; un échec
+statique les empêche pour éviter de tester un ancien build. Toute erreur garde un verdict global rouge.
 
 ### `pnpm verify:project`
 
-Exécute `verify:quality`, puis Lighthouse mobile et bureau.
+Ajoute Lighthouse mobile et bureau aux mêmes contrôles. Lorsque le build est valide, Lighthouse
+s'exécute même si l'audit ou les tests navigateur ont échoué, afin de fournir tous les diagnostics.
 
 ### `pnpm verify`
 

@@ -2,7 +2,7 @@ import siteSearchStyles from "@/assets/css/components/site-search.scss?inline";
 import { isSearchSortMode } from "@/components/search/site-search-model";
 import { loadPagefindModule } from "@/components/search/site-search-pagefind";
 import { SITE_EVENTS, SITE_LOADING_INDICATOR_DELAY_MS } from "@/lib/site-contracts";
-import { hideSiteTooltip } from "./site-tooltips.js";
+import { hideSiteTooltip, showSiteTooltip } from "./site-tooltips.js";
 import { loadMaterialCustomElements } from "./material-custom-elements.js";
 import { renderSearchFilters, renderSearchResults } from "./site-search-renderer.js";
 import {
@@ -30,6 +30,7 @@ const INTERNAL_PAGEFIND_PATH = "/posts/pagefind-index-placeholder/";
 const SEARCH_MATERIAL_TAG_NAMES = [
   "md-chip-set",
   "md-dialog",
+  "md-filter-chip",
   "md-filled-select",
   "md-filled-text-field",
   "md-select-option",
@@ -45,7 +46,6 @@ function ensureSiteSearchStyles() {
 }
 
 const panelControllers = new WeakMap();
-let filterChipModule;
 let searchMaterialModule;
 
 function loadSearchMaterialModule() {
@@ -57,17 +57,6 @@ function loadSearchMaterialModule() {
     throw error;
   });
   return searchMaterialModule;
-}
-
-function loadFilterChipModule() {
-  filterChipModule ??= loadMaterialCustomElements({
-    load: () => import("@material/web/chips/filter-chip.js"),
-    tagNames: ["md-filter-chip"],
-  }).catch((error) => {
-    filterChipModule = undefined;
-    throw error;
-  });
-  return filterChipModule;
 }
 
 function controlValue(event) {
@@ -125,7 +114,6 @@ class SearchPanelController {
     this.loadingIndicatorTimer = 0;
     this.queryDebounceTimer = 0;
     this.inputControl = undefined;
-    this.filterChipReady = loadFilterChipModule();
 
     this.handleInput = this.handleInput.bind(this);
     this.handleSearchInputKeydown = this.handleSearchInputKeydown.bind(this);
@@ -426,9 +414,7 @@ class SearchPanelController {
 
     try {
       const pagefind = await this.loadPagefind();
-      const [filters] = await this.withSearchTimeout(
-        Promise.all([pagefind.filters(), this.filterChipReady]),
-      );
+      const filters = await this.withSearchTimeout(pagefind.filters());
       this.filtersLoaded = true;
       this.allTagFilterCounts = filters.tag;
       this.setTagFilterCounts(filters.tag);
@@ -500,7 +486,6 @@ class SearchPanelController {
         pagefind.search(query || null, this.pagefindSearchOptions()),
       );
 
-      await this.filterChipReady;
       if (currentRequest !== this.requestId) return;
 
       this.setTagFilterCounts(response.filters?.tag ?? response.totalFilters?.tag);
@@ -700,11 +685,13 @@ export function initSiteSearchTriggers() {
     const openButton = root.querySelector("[data-search-open]");
     const openIcon = root.querySelector("[data-search-open-icon]");
     const openProgress = root.querySelector("[data-search-open-progress]");
+    const openStatus = root.querySelector("[data-search-open-status]");
     const dialog = root.querySelector("[data-search-dialog]");
     const closeButton = root.querySelector("[data-search-close]");
     const panel = dialog.querySelector("[data-site-search-panel]");
     let opening = false;
     let indicatorTimer = 0;
+    let needsReload = false;
 
     const stopOpeningIndicator = () => {
       openButton.removeAttribute("aria-busy");
@@ -722,11 +709,16 @@ export function initSiteSearchTriggers() {
 
     const open = async () => {
       if (opening) return;
+      if (needsReload) {
+        window.location.reload();
+        return;
+      }
       if (dialog.open) {
         initSiteSearchPanel(panel, { includeDeferred: true })?.focus();
         return;
       }
       hideSiteTooltip();
+      const hadTriggerFocus = openButton.matches(":focus-within");
       opening = true;
       openButton.setAttribute("aria-expanded", "true");
       openButton.disabled = true;
@@ -782,8 +774,25 @@ export function initSiteSearchTriggers() {
         window.requestAnimationFrame(() => {
           window.requestAnimationFrame(() => focusSiteSearchPanel(panel));
         });
+      } catch {
+        // Browsers cache failed ESM fetches. Offer an explicit reload instead
+        // of leaving an unusable trigger or repeatedly importing the same URL.
+        needsReload = true;
+        openButton.setAttribute("aria-expanded", "false");
+        openButton.removeAttribute("aria-haspopup");
+        openButton.setAttribute("aria-label", "Recharger la page pour réessayer la recherche");
+        const message = "Impossible de charger la recherche. Rechargez la page pour réessayer.";
+        openButton.dataset.tooltip = message;
+        if (openStatus) openStatus.textContent = message;
       } finally {
         endOpening();
+        if (needsReload) {
+          await openButton.updateComplete;
+          if (hadTriggerFocus && document.activeElement === document.body) {
+            openButton.focus({ preventScroll: true });
+          }
+          showSiteTooltip(openButton);
+        }
       }
     };
 

@@ -1,5 +1,6 @@
 ---
 interface Props {
+  headingId?: string;
   repo?: string;
   repoId?: string;
   category?: string;
@@ -13,6 +14,7 @@ interface Props {
 }
 
 const {
+  headingId = "commentaires",
   repo = "",
   repoId = "",
   category = "",
@@ -32,7 +34,7 @@ const discussionTerm = discussionPath ? `${discussionPath}/` : "index";
 
 <section
   class="giscus-comments"
-  aria-labelledby="commentaires"
+  aria-labelledby={headingId}
   data-pagefind-ignore
   data-giscus-comments
   data-repo={repo}
@@ -50,8 +52,8 @@ const discussionTerm = discussionPath ? `${discussionPath}/` : "index";
 >
   <header class="giscus-comments-header">
     <div class="giscus-comments-intro">
-      <h2 id="commentaires">
-        <a href="#commentaires" class="heading-link">Commentaires</a>
+      <h2 id={headingId}>
+        <a href={`#${headingId}`} class="heading-link">Commentaires</a>
       </h2>
       <p>
         Une question, une correction ou un retour ? Participez à la discussion dans le respect du

@@ -17,7 +17,7 @@ const YOUNG_GAMES = Object.freeze([
   "One Piece",
   "Naruto",
 ]);
-const boundRoots = new WeakSet();
+const boundFields = new WeakSet();
 
 function readCookie(name) {
   return readCookieValue(document.cookie, name);
@@ -84,14 +84,13 @@ function youngGameMessage(game) {
 }
 
 export function bindExplicitContentAge(root) {
-  if (boundRoots.has(root)) return;
-
   const ageField = root.querySelector("[data-cookie-age]");
   const acknowledgeButton = root.querySelector("[data-cookie-action='acknowledge']");
   const ageStatus = root.querySelector("[data-cookie-age-status]");
   if (!(ageField instanceof HTMLElement) || !(acknowledgeButton instanceof HTMLElement)) return;
+  if (boundFields.has(ageField)) return;
 
-  boundRoots.add(root);
+  boundFields.add(ageField);
   let lastUserSelectedBirthDate = null;
   let youthMessage = "";
   const sync = (userInitiated = false) => {

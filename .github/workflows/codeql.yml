@@ -64,7 +64,17 @@ jobs:
         if: steps.ci_lane.outputs.lane == 'full'
         uses: github/codeql-action/analyze@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4.38.0
         with:
+          output: codeql-results
           # Private repositories without GitHub Code Security can run the
           # analysis, but GitHub rejects the SARIF upload. Restore uploads
           # automatically if the repository becomes public again.
           upload: ${{ github.event.repository.private && 'never' || 'always' }}
+
+      - name: Preserve CodeQL analysis results
+        if: ${{ always() && steps.ci_lane.outputs.lane == 'full' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: codeql-results
+          path: codeql-results/*.sarif
+          if-no-files-found: warn
+          retention-days: 14

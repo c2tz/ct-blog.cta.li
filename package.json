@@ -25,7 +25,7 @@
     "theme:check": "tsx scripts/generate-material-theme.ts --check",
     "theme:generate": "tsx scripts/generate-material-theme.ts",
     "check": "astro check",
-    "audit:dependencies": "pnpm audit --audit-level low",
+    "audit:dependencies": "node scripts/audit-dependencies.mjs",
     "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix",
     "check:knip": "knip --no-config-hints",
@@ -37,9 +37,9 @@
     "check:konachan-runtime": "node scripts/check-konachan-runtime-manifest.mjs",
     "prepare:landing-assets": "node scripts/fetch-private-landing-assets.mjs",
     "verify": "pnpm verify:project",
-    "verify:quality:static": "pnpm test:unit && pnpm theme:check && pnpm check && pnpm lint && pnpm audit:dependencies && pnpm check:material-symbols && pnpm check:knip && pnpm format:check && pnpm build:test && pnpm check:headers",
-    "verify:quality": "pnpm verify:quality:static && PLAYWRIGHT_REUSE_BUILD=1 pnpm test:e2e",
-    "verify:project": "pnpm verify:quality && pnpm test:lighthouse",
+    "verify:quality:static": "pnpm test:unit && pnpm theme:check && pnpm check && pnpm lint && pnpm check:material-symbols && pnpm check:knip && pnpm format:check && pnpm build:test && pnpm check:headers",
+    "verify:quality": "node scripts/verify-project.mjs",
+    "verify:project": "node scripts/verify-project.mjs --lighthouse",
     "lint:commit": "commitlint",
     "index:search": "node scripts/clean-pagefind.mjs && pagefind --site dist --glob \"posts/**/index.html\" --silent && node scripts/prune-pagefind-output.mjs && node scripts/sync-pagefind-dev.mjs",
     "minify:html": "node scripts/minify-dist-html.mjs",
@@ -71,7 +71,7 @@
     "rehype-slug": "^6.0.0",
     "satori": "0.33.4",
     "satori-html": "^0.3.2",
-    "sharp": "^0.35.4"
+    "sharp": "^0.35.5"
   },
   "packageManager": "pnpm@11.1.3",
   "volta": {
@@ -86,7 +86,7 @@
     "@lhci/cli": "0.15.1",
     "@playwright/test": "1.62.1",
     "@shikijs/transformers": "^4.4.3",
-    "@types/node": "^26.5.1",
+    "@types/node": "^22.20.5",
     "eslint": "^9.39.5",
     "eslint-plugin-astro": "^1.7.0",
     "eslint-plugin-jsx-a11y": "6.10.2",
@@ -101,6 +101,7 @@
     "prettier": "^3.9.6",
     "prettier-plugin-astro": "^0.14.1",
     "sass": "^1.104.0",
+    "semver": "^7.8.5",
     "tsx": "4.23.13",
     "typescript": "6.0.3",
     "typescript-eslint": "^8.70.0"

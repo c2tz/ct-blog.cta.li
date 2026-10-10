@@ -59,6 +59,25 @@ test("refuse le CSS inline et les feuilles non versionnées", async (t) => {
   assert.ok(issues.some((issue) => issue.includes("CSS non versionnée")));
 });
 
+test("signale les identifiants dupliqués sans confondre les fragments template indépendants", async (t) => {
+  const distDirectory = await mkdtemp(join(tmpdir(), "ct-blog-duplicate-ids-"));
+  t.after(() => rm(distDirectory, { force: true, recursive: true }));
+  await writeFixture(
+    distDirectory,
+    "index.html",
+    `<!doctype html><html><head>
+    <link rel="canonical" href="https://ct-blog.cta.li/">
+    <link rel="stylesheet" href="/_astro/site.hash.css"></head><body><h1>Accueil</h1>
+    <h2 id="commentaires">Section éditoriale</h2><h2 id="commentaires">Giscus</h2>
+    <p id="shared">Visible</p><template><p id="shared">Inerte</p></template>
+    <template><p id="inside">Un</p><p id="inside">Deux</p></template></body></html>`,
+  );
+  const { issues } = await collectBuiltContentIssues({ distDirectory });
+  assert.ok(issues.includes('/: identifiant HTML dupliqué "commentaires"'));
+  assert.ok(issues.includes('/: identifiant HTML dupliqué "inside"'));
+  assert.ok(!issues.some((issue) => issue.includes('dupliqué "shared"')));
+});
+
 test("refuse les protocoles URL exécutables ou embarqués dans toutes les références", async (t) => {
   const distDirectory = await mkdtemp(join(tmpdir(), "ct-blog-protocol-check-"));
   t.after(() => rm(distDirectory, { force: true, recursive: true }));
