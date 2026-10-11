@@ -9,3 +9,4 @@ src/assets/css/base/material-theme.generated.scss
 coverage/
 pnpm-lock.yaml
 *.report.html
+reports/

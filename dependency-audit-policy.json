@@ -1,0 +1,26 @@
+{
+  "exceptions": [
+    {
+      "id": "GHSA-vfj7-8cjw-p6xm",
+      "package": "braces",
+      "version": "3.0.3",
+      "severity": "high",
+      "unpublishedPatchedRange": ">=3.0.4",
+      "paths": [".>eslint-plugin-astro>astro-eslint-parser>fast-glob>micromatch>braces"],
+      "expiresOn": "2026-11-10",
+      "reason": "Development-only Astro ESLint parser. The affected glob patterns come from trusted parserOptions.project configuration, not article contents or visitor input. This repository does not set parserOptions.project. No fixed release is published.",
+      "removeWhen": "A fixed braces release or a compatible Astro ESLint parser without fast-glob is available."
+    },
+    {
+      "id": "GHSA-hp3w-g68c-fv3c",
+      "package": "sprintf-js",
+      "version": "1.0.3",
+      "severity": "moderate",
+      "unpublishedPatchedRange": ">=1.1.4",
+      "paths": [".>@lhci/cli>@lhci/utils>js-yaml>argparse>sprintf-js"],
+      "expiresOn": "2026-11-10",
+      "reason": "Development-only dependency of the js-yaml command-line interface. LHCI imports the YAML library; it does not run that CLI. The repository uses a CommonJS Lighthouse configuration. No untrusted format string reaches sprintf-js on this path and no fixed release is published.",
+      "removeWhen": "A fixed sprintf-js release or an LHCI update removing the js-yaml 3 CLI dependency is available."
+    }
+  ]
+}

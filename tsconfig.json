@@ -1,7 +1,16 @@
 {
   "extends": "astro/tsconfigs/strict",
   "include": [".astro/types.d.ts", "**/*"],
-  "exclude": ["dist", "public/pagefind"],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "public/pagefind",
+    "playwright-report",
+    "test-results",
+    "lighthouse-reports",
+    ".lighthouseci",
+    "reports"
+  ],
   "compilerOptions": {
     "paths": {
       "@/*": ["./src/*"]
