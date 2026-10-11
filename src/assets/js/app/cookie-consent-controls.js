@@ -327,6 +327,7 @@ class SiteCookieConsentBanner extends HTMLElement {
     window.removeEventListener("keydown", this.#handleKeydown, true);
     this.#cancelFocusRequest();
     this.#unlockPage();
+    this.#activeNotice = null;
     delete this.dataset.cookieConsentReady;
   }
 
@@ -341,6 +342,9 @@ class SiteCookieConsentBanner extends HTMLElement {
         : null;
 
     const currentNotice = this.querySelector("[data-cookie-active-notice]");
+    // A consent update from another tab can change the pending privacy notice
+    // while the age notice remains active. Keep its field, listeners and focus.
+    if (nextNotice === this.#activeNotice && currentNotice) return;
     const adoptBootNotice =
       nextNotice === "explicit-content" && currentNotice?.hasAttribute("data-cookie-boot-notice");
     if (!adoptBootNotice) currentNotice?.remove();
@@ -493,6 +497,20 @@ class SiteCookieConsentBanner extends HTMLElement {
 class SiteCookiePreferences extends HTMLElement {
   #services = null;
 
+  #handleConsentChange = () => {
+    const services = readConsent()?.services ?? null;
+    if (
+      services === this.#services ||
+      (services &&
+        this.#services &&
+        OPTIONAL_SERVICE_IDS.every((service) => services[service] === this.#services[service]))
+    ) {
+      return;
+    }
+    this.#services = services;
+    this.#syncView();
+  };
+
   #handleClick = (event) => {
     const actionControl =
       event.target instanceof Element
@@ -524,7 +542,7 @@ class SiteCookiePreferences extends HTMLElement {
     if (!service || !OPTIONAL_SERVICE_IDS.includes(service)) return;
 
     const services = {
-      ...(this.#services ?? createOptionalServices(false)),
+      ...(readConsent()?.services ?? createOptionalServices(false)),
       [service]: Boolean(serviceControl.selected),
     };
     this.#writeServices(services, "Préférences des services optionnels enregistrées.");
@@ -538,12 +556,14 @@ class SiteCookiePreferences extends HTMLElement {
     this.#syncView();
     this.addEventListener("click", this.#handleClick);
     this.addEventListener("change", this.#handleChange);
+    document.addEventListener(SITE_EVENTS.consentChange, this.#handleConsentChange);
     document.dispatchEvent(new Event("site:cookie-preferences-ready"));
   }
 
   disconnectedCallback() {
     this.removeEventListener("click", this.#handleClick);
     this.removeEventListener("change", this.#handleChange);
+    document.removeEventListener(SITE_EVENTS.consentChange, this.#handleConsentChange);
     delete this.dataset.cookiePreferencesReady;
   }
 

@@ -25,8 +25,8 @@ de navigation ; le second exécute Lighthouse.
 
 ### Check Astro, Material Web, and security headers
 
-Dans la lane complète, un job exécute les contrôles statiques et le build pendant que huit runners
-Playwright indépendants construisent le même commit et se partagent la collection avec
+Dans la lane complète, un job exécute les contrôles statiques et construit une seule fois le site de
+test. Huit runners Playwright téléchargent son artefact `dist`, identifié par le SHA du commit, et se partagent la collection avec
 `--shard=1/8` à `--shard=8/8`. Chaque runner conserve un seul worker afin d'éviter la contention entre
 navigateurs sur une même machine. `fullyParallel: true` permet à Playwright de répartir les tests
 individuels sans retirer de projet Chromium ou WebKit.
@@ -35,13 +35,18 @@ Les builds destinés aux navigateurs activent `SITE_TEST_FIXTURES=1` pour inclur
 test. Cette option est aussi active dans la matrice nocturne ; les builds de déploiement et
 Lighthouse conservent les seules routes du site.
 
+L'audit des dépendances tourne en parallèle dans son propre job. Son échec ne coupe pas les
+diagnostics du build ou des navigateurs, mais reste bloquant dans le verdict requis. Le rapport
+JSON et sa synthèse Markdown sont conservés dans l'artefact `dependency-audit` pendant 14 jours.
+Les versions Node.js et pnpm sont lues depuis `package.json` par l'action commune de préparation.
+
 `fail-fast: false` laisse les huit shards terminer même si l'un échoue. Chaque shard publie un
 rapport blob au nom unique ; les traces et captures d'un shard rouge sont conservées pendant 14 jours.
 Un job séparé exige exactement huit blobs, les fusionne et publie le rapport HTML.
 
 Le job portant le nom requis `Check Astro, Material Web, and security headers` ne duplique aucun test :
 il utilise `needs` avec `always()` et vérifie le résultat exact attendu pour la lane. Une
-classification absente, un contrôle statique rouge, un shard échoué ou annulé, un rapport manquant et
+classification absente, un contrôle statique ou un audit rouge, un shard échoué ou annulé, un rapport manquant et
 toute combinaison inattendue font échouer ce verdict unique. Les rulesets restent donc attachés au
 même nom sans considérer un shard isolé comme une validation complète.
 
@@ -64,9 +69,13 @@ leur verdict changent selon la lane.
 
 - `docs` vérifie les documents modifiés sans build, navigateur, Lighthouse ni analyse CodeQL réelle ;
 - `content` vérifie le formatage et les tests unitaires, construit le site et Pagefind, valide le
-  contenu et la CSP, puis exécute un smoke Chromium ciblé ;
+  contenu et la CSP, puis exécute un smoke Chromium ciblé ; l'audit des dépendances est aussi requis ;
 - `post-merge` republie rapidement les cinq statuts sans répéter les contrôles déjà réussis ;
 - `full` conserve tous les contrôles, navigateurs, Lighthouse et CodeQL.
+
+Les fichiers `.mdx` utilisent toujours `full`, car ils peuvent contenir du code et des composants.
+Les rapports SARIF CodeQL sont conservés en artefact pendant 14 jours, même lorsque l'envoi vers
+GitHub code scanning est désactivé pour un dépôt privé.
 
 Tout chemin inconnu, SHA incomplet ou historique indisponible utilise `full`. Les pushes directs,
 forcés, multiples ou non prouvables restent également complets, même si le message du commit
@@ -102,6 +111,14 @@ complètent mais ne remplacent pas Safari sur un vrai appareil.
 Dependabot ouvre automatiquement ses propositions vers `develop`, mais elles restent toujours à
 décider par `c2tz` : elles lui sont assignées, demandent sa revue de propriétaire du code et ne
 sont jamais fusionnées automatiquement.
+
+Les mises à jour patch et mineures sont regroupées par famille : Astro, lint/TypeScript, vidéo,
+outils de test navigateur et formatage. Les majeures restent dans des propositions séparées pour
+que leur migration puisse être examinée. Les majeures Node types, TypeScript et ESLint/Astro lint
+restent exclues de l'automatisation tant que le runtime et les dépendances paires n'ont pas été
+alignés ; leur migration doit être coordonnée. Les overrides de `pnpm-workspace.yaml` doivent être revus
+avec leurs dépendances parentes : une version imposée peut empêcher l'installation d'un nouveau
+correctif même si le parent a été mis à jour.
 
 ### Refresh Konachan backgrounds
 

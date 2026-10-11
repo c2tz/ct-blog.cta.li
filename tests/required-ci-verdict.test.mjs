@@ -37,6 +37,7 @@ test("fails closed when lane classification did not succeed", () => {
 test("rejects missing, unknown, and malformed job results", () => {
   for (const [name, value] of [
     ["classification", undefined],
+    ["dependencyAudit", undefined],
     ["projectQuality", ""],
     ["playwrightShards", "neutral"],
     ["playwrightReport", "timed_out"],
@@ -62,11 +63,30 @@ test("rejects unknown and absent lanes", () => {
   }
 });
 
+test("rejects inherited property names even when every validation job failed", () => {
+  for (const lane of ["__proto__", "constructor", "toString"]) {
+    const verdict = evaluateRequiredCiVerdict({
+      classification: "success",
+      dependencyAudit: "failure",
+      lane,
+      playwrightReport: "failure",
+      playwrightShards: "failure",
+      projectQuality: "failure",
+    });
+    assert.equal(verdict.ok, false, lane);
+    assert.match(verdict.reason, /lane is absent or invalid/);
+  }
+});
+
 test("rejects every incomplete or unexpectedly executed lane", () => {
   const cases = [
     successfulLane("docs", { projectQuality: "failure" }),
+    successfulLane("docs", { dependencyAudit: "success" }),
+    successfulLane("content", { dependencyAudit: "skipped" }),
     successfulLane("content", { playwrightShards: "success" }),
     successfulLane("full", { playwrightShards: "failure" }),
+    successfulLane("full", { dependencyAudit: "failure" }),
+    successfulLane("full", { dependencyAudit: "cancelled" }),
     successfulLane("full", { playwrightReport: "skipped" }),
     successfulLane("post-merge", { projectQuality: "success" }),
   ];

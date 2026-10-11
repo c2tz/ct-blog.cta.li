@@ -7,7 +7,7 @@ const nightly = process.env.PLAYWRIGHT_NIGHTLY === "1";
 const firefoxNightlyTestMatch =
   /(?:image-preview-(?:core|interactions|generated|viewport)|site-resilience)\.spec\.ts/;
 const webkitPullRequestTestMatch =
-  /(?:image-preview-(?:core|interactions|generated|viewport)|site-(?:archive|consent|content|giscus|loading-recovery|motion|navigation|rendering|search|search-ranking|tooltips))\.spec\.ts/;
+  /(?:image-preview-(?:core|interactions|generated|viewport)|site-(?:archive|consent(?:-contexts)?|content|giscus|loading-recovery|motion|navigation|rendering|search|search-ranking|tooltips))\.spec\.ts/;
 
 // The standard Chromium lane is dimension-based instead of repeating every
 // logical test through the full theme/viewport cross-product:
@@ -22,7 +22,7 @@ const chromiumStandardTestIgnore = /site-resilience\.spec\.ts/;
 const chromiumDesktopDarkTestMatch =
   /site-(?:consent-ui|content|home-theme|motion|rendering)\.spec\.ts/;
 const chromiumMobileLightTestMatch =
-  /(?:image-preview-(?:core|interactions|generated|viewport)|site-(?:archive|consent|content|giscus|home-theme|loading-recovery|motion|navigation|rendering|search|search-ranking|tooltips))\.spec\.ts/;
+  /(?:image-preview-(?:core|interactions|generated|viewport)|site-(?:archive|consent(?:-contexts)?|content|giscus|home-theme|loading-recovery|motion|navigation|rendering|search|search-ranking|tooltips))\.spec\.ts/;
 const chromiumMobileDarkTestMatch = /site-(?:home-theme|motion|rendering)\.spec\.ts/;
 
 const desktopViewport = { width: 1440, height: 1100 };
@@ -68,6 +68,7 @@ const nightlyProjects = nightly
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: true,
+  failOnFlakyTests: true,
   outputDir: process.env.PLAYWRIGHT_OUTPUT_DIR || "test-results",
   reporter: nightly
     ? [
@@ -93,7 +94,9 @@ export default defineConfig({
     video: nightly ? "retain-on-failure" : "off",
   },
   webServer: {
-    command: reuseExistingBuild ? "pnpm preview:local" : "pnpm build:test && pnpm preview:local",
+    command: reuseExistingBuild
+      ? `node scripts/preview-test-server.mjs --port ${PORT}`
+      : `pnpm build:test && node scripts/preview-test-server.mjs --port ${PORT}`,
     url: BASE_URL,
     reuseExistingServer: process.env.PLAYWRIGHT_REUSE_SERVER === "1",
     timeout: 120_000,
