@@ -288,6 +288,10 @@ class SiteRichTooltipController {
     if (!this.active) return;
     const { surface, trigger } = this.active;
 
+    // Cancel pending layout work before removing the measured popover from
+    // the top layer, including during the handoff to an image dialog.
+    this.active.stopTracking?.();
+    this.active.stopTracking = null;
     try {
       if (popoverIsOpen(surface)) surface.hidePopover();
     } catch {

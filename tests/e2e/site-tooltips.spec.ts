@@ -31,6 +31,47 @@ test("loads rich and context tooltip controllers only for matching DOM", async (
   expect(conditionalRequests.some((url) => url.includes("site-rich-tooltips."))).toBe(true);
 });
 
+test("cancels pending rich tooltip sizing when Escape closes it during a layout change", async ({
+  page,
+}) => {
+  await gotoRoute(page, "/posts/hugo-material-shortcodes");
+  const tooltip = page.locator("#tooltip-http-shiki");
+  const trigger = page.locator('[data-rich-tooltip-trigger="tooltip-http-shiki"]');
+  await expect(tooltip).toHaveAttribute("data-rich-tooltip-enhanced", "true");
+  await trigger.focus();
+  await expectPopoverOpen(tooltip, true);
+  await expect(tooltip).toHaveCSS("visibility", "visible");
+
+  const styles = await tooltip.evaluate(async (surface) => {
+    const trigger = document.querySelector<HTMLElement>(
+      '[data-rich-tooltip-trigger="tooltip-http-shiki"]',
+    );
+    if (!trigger) throw new Error("Missing rich tooltip trigger");
+    const nextRender = () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => window.setTimeout(resolve));
+      });
+    await nextRender();
+
+    // Start an asynchronous position update, then close before its sizing
+    // middleware resumes. A closed popover must no longer receive layout writes.
+    trigger.style.transform = "translateY(-80px)";
+    window.dispatchEvent(new Event("resize"));
+    trigger.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    const closed = surface.getAttribute("style");
+    await nextRender();
+    return { closed, settled: surface.getAttribute("style") };
+  });
+
+  expect(styles.settled).toBe(styles.closed);
+  await expectPopoverOpen(tooltip, false);
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
+  await trigger.blur();
+  await trigger.focus();
+  await expectPopoverOpen(tooltip, true);
+  await expect(tooltip).toHaveCSS("visibility", "visible");
+});
+
 test("paints the complete simple tooltip on its first visible frames", async ({ page }) => {
   await gotoRoute(page, "/");
   await waitForAppReady(page);
