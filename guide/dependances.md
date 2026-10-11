@@ -26,7 +26,7 @@ paquets directs. Il est donc beaucoup plus long que la liste de `package.json`.
 | `@material/web`                      | Fournit les composants Material 3 utilisés par l'interface                  | Oui, seulement les modules importés et découpés par le build  |
 | `@material/material-color-utilities` | Calcule les palettes Material dynamiques et le thème généré                 | Partiellement, pour les couleurs dynamiques ; aussi au build  |
 | `@floating-ui/dom`                   | Positionne menus et surfaces flottantes                                     | Oui, quand la fonctionnalité correspondante est chargée       |
-| `@vercel/analytics` | Statistiques de fréquentation en production | Oui, seulement après son accord individuel |
+| `@vercel/analytics`                  | Statistiques de fréquentation en production                                 | Oui, seulement après son accord individuel                    |
 | `@vercel/speed-insights`             | Mesure optionnelle des performances après consentement                      | Oui, seulement après son accord individuel                    |
 | `rehype-slug`                        | Ajoute des identifiants aux titres Markdown                                 | Non ; seul le HTML résultant est servi                        |
 | `rehype-autolink-headings`           | Rend les titres Markdown directement liés à leur ancre                      | Non ; seul le HTML résultant est servi                        |
@@ -128,3 +128,55 @@ pnpm verify:quality
 Pour une dépendance visible dans le navigateur ou un outil de build majeur, lancez également
 `pnpm verify` et examinez le résultat visuel. Ne lancez pas `pnpm update --latest` sans plan : cela
 mélange de nombreuses migrations et rend une régression difficile à attribuer.
+
+## Diagnostiquer un audit
+
+`pnpm audit:dependencies` conserve la réponse complète du registre dans
+`reports/dependency-audit.json` et un résumé avec les chaînes de dépendances dans
+`reports/dependency-audit.md`. GitHub Actions conserve les deux rapports. Une panne réseau ou une
+réponse invalide est signalée comme un audit indisponible, jamais comme une absence de risque.
+
+Les avis restent bloquants à partir du niveau faible. Les rares exceptions sont écrites dans
+`dependency-audit-policy.json` : avis GHSA, paquet, version, gravité, chaîne exacte exclusivement de
+développement, justification et échéance. Une nouvelle chaîne, une version ou gravité différente,
+un correctif publié ou l’expiration rend l’avis de nouveau bloquant. Le rapport brut et la sortie
+de commande affichent toujours les exceptions ; `pnpm audit --audit-level low` reste disponible
+pour consulter le verdict sans cette politique.
+
+Le registre peut annoncer une plage corrigée avant la publication du paquet. Pour les seules
+exceptions correspondant à la plage examinée, le script vérifie les versions réellement publiées
+sur npm. Une version satisfaisant cette plage désactive immédiatement l’exception ; une panne de
+cette vérification reste bloquante.
+
+Au 10 octobre 2026, deux exceptions expirent le 10 novembre 2026 :
+
+- `GHSA-vfj7-8cjw-p6xm` (`braces`) : pas de correctif publié ; les motifs concernés proviennent de
+  la configuration de projet du parseur ESLint, absente dans ce dépôt, et non du contenu des articles ;
+- `GHSA-hp3w-g68c-fv3c` (`sprintf-js`) : pas de correctif publié ; cette dépendance sert à l’interface
+  de commande de `js-yaml`, que LHCI n’exécute pas. La configuration du projet est `lighthouserc.cjs`.
+
+Ces exceptions ne déclarent pas les paquets corrigés. Réexaminer les chemins et la justification lors
+de la mise à jour de leurs parents ; privilégier leur suppression dès qu’une version compatible le permet.
+
+À cette date, les remplacements demandent une migration coordonnée : le plugin Astro 2/3 exige
+ESLint 10, alors que `eslint-plugin-jsx-a11y` 6.10.2 accepte au plus ESLint 9. Forcer seulement le
+parseur Astro 2 sous le plugin 1 sort de sa plage prise en charge. De même, LHCI 0.15.1 utilise encore
+`yaml.safeLoad()` pour les configurations YAML ; un override vers `js-yaml` 4 casserait cette API.
+
+## Maintenir les overrides
+
+Chaque override impose une résolution différente de celle du parent. Avant d’en ajouter un,
+vérifier qu’un simple renouvellement du lockfile dans la plage existante ne suffit pas. Les
+correctifs rétroportés de `brace-expansion` permettent maintenant à chaque parent de conserver son
+API : le forçage global vers la version 5 et le patch de `minimatch` ont été retirés. Les corrections
+`fast-uri` et `ip-address` sont également résolues naturellement dans le lockfile.
+
+| Override                                                                                   | Motif / contrôle                                                                                       | Condition de suppression                                                                       |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `get-uri>basic-ftp`                                                                        | GHSA-c475-qrg2-pj4r ; les méthodes `Client` utilisées par get-uri restent disponibles en 6.x           | get-uri accepte une version corrigée dans sa propre plage                                      |
+| `lighthouse@12.6.1`                                                                        | Version de Lighthouse compatible avec les contrôles du projet ; vérifier les deux profils LHCI         | LHCI adopte cette génération de Lighthouse                                                     |
+| `@xmldom/xmldom`, `esbuild`, `fast-xml-parser`, `fflate`, `immutable`, `qs`, `tmp`, `uuid` | Correctifs transitifs hérités ; audit, unités, build et Lighthouse couvrent les parents correspondants | Retirer individuellement lorsque la résolution normale conserve une version sans avis bloquant |
+
+La dérogation de peer dependency `proxy-agent` accompagne encore LHCI/Lighthouse : elle doit être
+réexaminée avec leur mise à jour groupée. Ne pas supprimer un override uniquement pour raccourcir
+le fichier, ni le conserver lorsque le parent n’en a plus besoin.

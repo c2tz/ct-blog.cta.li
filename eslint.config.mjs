@@ -38,6 +38,15 @@ export default defineConfig(
   ...astro.configs["flat/recommended"],
   ...ASTRO_A11Y_CONFIGS,
   {
+    files: ["**/*.astro"],
+    languageOptions: {
+      parserOptions: {
+        // pnpm does not expose the transitive @typescript-eslint/parser at the project root.
+        parser: tseslint.parser,
+      },
+    },
+  },
+  {
     files: SOURCE_FILES,
     languageOptions: {
       globals: globals.browser,
