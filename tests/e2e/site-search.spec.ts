@@ -364,16 +364,10 @@ test("keeps the official Material filled select and its complete sort menu", asy
     .poll(() => sortSelect.evaluate((select) => getComputedStyle(select).minWidth))
     .toBe(test.info().project.name.includes("mobile") ? "0px" : "192px");
   await sortSelect.evaluate((select) => {
-    const menu = select.shadowRoot!.querySelector("md-menu") as HTMLElement & {
-      reposition(): void;
-    };
-    const reposition = menu.reposition.bind(menu);
-    select.setAttribute("data-test-repositions", "0");
-    menu.reposition = () => {
-      const count = Number(select.getAttribute("data-test-repositions"));
-      select.setAttribute("data-test-repositions", String(count + 1));
-      reposition();
-    };
+    const menu = select.shadowRoot!.querySelector("md-menu") as HTMLElement;
+    // Loading filters/fonts or keyboard scrolling can legitimately reposition
+    // an open menu. Assert its complete first paint here; resize tracking has
+    // its own lifecycle regression below.
     select.addEventListener(
       "opening",
       () => {
@@ -506,7 +500,6 @@ test("keeps the official Material filled select and its complete sort menu", asy
     return Boolean(label && label.scrollWidth <= label.clientWidth);
   });
   expect(newestLabelFits).toBe(true);
-  await expect(sortSelect).toHaveAttribute("data-test-repositions", "0");
 });
 
 test("never exposes the internal Pagefind placeholder", async ({ page }) => {
@@ -755,6 +748,29 @@ test("restores the complete search sort menu after browser dezoom", async ({ pag
   await expect
     .poll(() => titleOption.evaluate((option) => option.matches(":focus-within")))
     .toBe(true);
+
+  await sortSelect.evaluate((select) => {
+    select.addEventListener("closed", () => select.setAttribute("data-test-menu-closed", "true"), {
+      once: true,
+    });
+  });
+  await page.keyboard.press("Escape");
+  await expect(sortSelect).toHaveAttribute("data-test-menu-closed", "true");
+  const repositionsAfterClose = await sortSelect.getAttribute(
+    "data-test-visual-viewport-repositions",
+  );
+  await sortSelect.evaluate(async () => {
+    // Visual-viewport changes must not reposition a menu after `closed`.
+    // Use two frames to flush any incorrectly scheduled reposition callback.
+    window.visualViewport!.dispatchEvent(new Event("resize"));
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    });
+  });
+  await expect(sortSelect).toHaveAttribute(
+    "data-test-visual-viewport-repositions",
+    repositionsAfterClose!,
+  );
 });
 
 test("delays and aggregates the linear search progress indicator", async ({ page }) => {
