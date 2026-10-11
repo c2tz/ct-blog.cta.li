@@ -56,6 +56,7 @@ paquets directs. Il est donc beaucoup plus long que la liste de `package.json`.
 | `html-minifier-terser`                                 | Minification du HTML produit                                           |
 | `pagefind`                                             | Création de l'index de recherche statique                              |
 | `parse5`                                               | Analyse structurée du HTML dans les contrôles de contenu et de preview |
+| `semver`                                               | Vérification des versions corrigées réellement publiées dans l’audit   |
 | `sass`                                                 | Compilation des fichiers `.scss` en CSS                                |
 | `material-symbols`                                     | Source de la police d'icônes locale réduite                            |
 
@@ -129,6 +130,12 @@ Pour une dépendance visible dans le navigateur ou un outil de build majeur, lan
 `pnpm verify` et examinez le résultat visuel. Ne lancez pas `pnpm update --latest` sans plan : cela
 mélange de nombreuses migrations et rend une régression difficile à attribuer.
 
+`pnpm verify:quality` exécute les contrôles statiques, l’audit et les navigateurs en conservant un
+résumé de chaque résultat. Un audit rouge n’empêche plus de diagnostiquer les tests navigateur.
+En revanche, un build ou contrôle statique en échec empêche de tester un ancien `dist` par erreur.
+`pnpm verify` ajoute Lighthouse, même lorsqu’un test navigateur échoue. Toute étape en échec garde
+la commande globale en échec.
+
 ## Diagnostiquer un audit
 
 `pnpm audit:dependencies` conserve la réponse complète du registre dans
@@ -180,3 +187,7 @@ API : le forçage global vers la version 5 et le patch de `minimatch` ont été 
 La dérogation de peer dependency `proxy-agent` accompagne encore LHCI/Lighthouse : elle doit être
 réexaminée avec leur mise à jour groupée. Ne pas supprimer un override uniquement pour raccourcir
 le fichier, ni le conserver lorsque le parent n’en a plus besoin.
+
+Les types Node suivent désormais la ligne 22, version minimale exécutée en CI. Les versions de
+Node et pnpm utilisées par l’action de préparation sont lues dans `package.json`, également utilisé
+par Volta. Cela évite plusieurs valeurs indépendantes à modifier lors d’un changement de référence.

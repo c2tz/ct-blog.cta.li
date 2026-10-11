@@ -1,4 +1,4 @@
-import { expect, test } from "./site-fixture";
+import { expect, test, waitForAppReady } from "./site-fixture";
 
 test("serves slashless page URLs with matching canonical and article metadata", async ({
   page,
@@ -8,6 +8,7 @@ test("serves slashless page URLs with matching canonical and article metadata", 
       waitUntil: "domcontentloaded",
     });
     expect(response?.status()).toBe(200);
+    await waitForAppReady(page);
     const url = new URL(page.url());
     expect(url.pathname).toBe(path);
     expect(url.search).toBe("?source=url-check");
@@ -47,6 +48,7 @@ test("keeps technical posts reachable but out of every discovery feed", async ({
   for (const { slug, title } of hiddenPosts) {
     const response = await page.goto(`/posts/${slug}`, { waitUntil: "domcontentloaded" });
     expect(response?.status()).toBe(200);
+    await waitForAppReady(page);
     await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
     await expect(page.locator("article.post")).toHaveAttribute("data-pagefind-ignore", "all");
     await expect(page.locator("article.post")).not.toHaveAttribute("data-pagefind-body");

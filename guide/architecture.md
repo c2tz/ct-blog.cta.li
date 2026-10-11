@@ -44,6 +44,10 @@ H1 or an empty description. A draft remains reachable at `/posts/<slug>` for dir
 absent from the home page, tag routes, latest-posts JSON, RSS, sitemap, and Pagefind. Its displayed
 tags are labels rather than links to routes that do not exist.
 
+Git dates follow article renames back to the original creation commit. The in-process date cache
+also tracks HEAD, so committing an already-previewed edit refreshes its dates without restarting
+the development server. An entry with neither Git nor filesystem dates fails with its file path.
+
 Page URLs omit the trailing slash (`trailingSlash: "never"` in Astro). The static build keeps
 `<route>/index.html`; Vercel's native `trailingSlash: false` serves the slashless URL and redirects
 the old slash URL with HTTP 308. Query parameters and browser fragments are preserved. Local
@@ -66,6 +70,9 @@ URLs, a missing or duplicate H1/canonical, a canonical that does not match its r
 between `listed` and RSS/sitemap/Pagefind, a leaked/misconfigured Pagefind placeholder, inline
 `<style>` blocks, or a stylesheet that is not emitted as a versioned `/_astro/*.css` asset. Both
 `pnpm build` and `pnpm build:debug` run this check automatically.
+Duplicate HTML IDs are rejected within each document or template fragment. Article title and
+Giscus heading anchors keep their existing names unless a Markdown heading already uses them;
+in that case the page component reserves the next available numeric suffix.
 
 ## Material Web boundary
 

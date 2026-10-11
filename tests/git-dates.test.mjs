@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtemp, rm, utimes, writeFile } from "node:fs/promises";
+import { mkdtemp, rename, rm, stat, utimes, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -99,4 +99,76 @@ test("getFileGitDates caches by resolved stat signature and invalidates after a 
     process.chdir(initialCwd);
     await rm(repository, { force: true, recursive: true });
   }
+});
+
+async function createRepository(t) {
+  const initialCwd = process.cwd();
+  const repository = await mkdtemp(path.join(os.tmpdir(), "git-dates-history-"));
+  process.chdir(repository);
+  t.after(async () => {
+    process.chdir(initialCwd);
+    await rm(repository, { force: true, recursive: true });
+  });
+  const git = (...args) => execFileSync("git", args, { encoding: "utf8" }).trim();
+  git("init", "--quiet");
+  git("config", "user.name", "Dates Test");
+  git("config", "user.email", "dates@example.test");
+  const commit = (message, date) => {
+    git("add", ".");
+    execFileSync("git", ["-c", "commit.gpgsign=false", "commit", "--quiet", "-m", message], {
+      env: { ...process.env, GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date },
+    });
+    return git("rev-parse", "HEAD");
+  };
+  const module = await import(
+    new URL(`../src/lib/git-dates.mjs?history=${repository}`, import.meta.url)
+  );
+  return { ...module, commit };
+}
+
+test("keeps the original creation across an article rename", async (t) => {
+  const { getFileGitDates, commit } = await createRepository(t);
+  await writeFile("post.md", "Original article.\n");
+  const createdCommit = commit("feat: create article", "2025-01-01T12:00:00Z");
+  await writeFile("post.md", "Updated article.\n");
+  commit("feat: update article", "2025-02-01T12:00:00Z");
+  await rename("post.md", "renamed.md");
+  const renamedCommit = commit("refactor: rename article", "2025-03-01T12:00:00Z");
+
+  assert.deepEqual(getFileGitDates("renamed.md"), {
+    createdAt: "2025-01-01T12:00:00.000Z",
+    createdCommit,
+    lastModified: "2025-03-01T12:00:00.000Z",
+    lastModifiedCommit: renamedCommit,
+  });
+});
+
+test("invalidates cached dates when HEAD changes without another file write", async (t) => {
+  const { getFileGitDates, commit } = await createRepository(t);
+  await writeFile("post.md", "Original article.\n");
+  const createdCommit = commit("feat: create article", "2025-01-01T12:00:00Z");
+  await writeFile("post.md", "Updated article.\n");
+  assert.equal(getFileGitDates("post.md").lastModifiedCommit, createdCommit);
+  const before = await stat("post.md");
+  const modifiedCommit = commit("feat: update article", "2025-02-01T12:00:00Z");
+  const after = await stat("post.md");
+  assert.equal(after.mtimeMs, before.mtimeMs);
+  assert.equal(after.size, before.size);
+  assert.equal(getFileGitDates("post.md").lastModifiedCommit, modifiedCommit);
+});
+
+test("keeps content commits ahead of pull-request summary commits", async (t) => {
+  const { getFileGitDates, commit } = await createRepository(t);
+  await writeFile("post.md", "Original article.\n");
+  const original = commit("feat: create article", "2025-01-01T12:00:00Z");
+  await writeFile("post.md", "Summary change.\n");
+  commit("develop (#123)", "2025-02-01T12:00:00Z");
+  assert.equal(getFileGitDates("post.md").lastModifiedCommit, original);
+});
+
+test("reports absent file dates and rejects a missing content entry explicitly", async (t) => {
+  const { getFileGitDates, getContentEntryGitDates } = await createRepository(t);
+  assert.equal(getFileGitDates("missing.md").createdAt, undefined);
+  assert.equal(getFileGitDates("missing.md").lastModified, undefined);
+  assert.throws(() => getContentEntryGitDates("blog", "missing"), /Cannot determine content dates/);
 });

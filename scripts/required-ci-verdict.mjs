@@ -7,21 +7,25 @@ const JOB_RESULTS = new Set(["cancelled", "failure", "skipped", "success"]);
 
 export const EXPECTED_RESULTS_BY_LANE = Object.freeze({
   docs: Object.freeze({
+    dependencyAudit: "skipped",
     projectQuality: "success",
     playwrightShards: "skipped",
     playwrightReport: "skipped",
   }),
   content: Object.freeze({
+    dependencyAudit: "success",
     projectQuality: "success",
     playwrightShards: "skipped",
     playwrightReport: "skipped",
   }),
   full: Object.freeze({
+    dependencyAudit: "success",
     projectQuality: "success",
     playwrightShards: "success",
     playwrightReport: "success",
   }),
   "post-merge": Object.freeze({
+    dependencyAudit: "skipped",
     projectQuality: "skipped",
     playwrightShards: "skipped",
     playwrightReport: "skipped",
@@ -34,6 +38,7 @@ function failed(reason) {
 
 export function evaluateRequiredCiVerdict({
   classification,
+  dependencyAudit,
   lane,
   playwrightReport,
   playwrightShards,
@@ -41,6 +46,7 @@ export function evaluateRequiredCiVerdict({
 } = {}) {
   const results = {
     classification,
+    dependencyAudit,
     projectQuality,
     playwrightShards,
     playwrightReport,
@@ -58,10 +64,10 @@ export function evaluateRequiredCiVerdict({
     return failed(`CI lane classification did not succeed: ${classification}.`);
   }
 
-  const expected = EXPECTED_RESULTS_BY_LANE[lane];
-  if (!expected) {
+  if (!Object.hasOwn(EXPECTED_RESULTS_BY_LANE, lane)) {
     return failed(`The CI lane is absent or invalid: ${lane || "(empty)"}.`);
   }
+  const expected = EXPECTED_RESULTS_BY_LANE[lane];
 
   const mismatches = Object.entries(expected)
     .filter(([name, result]) => results[name] !== result)
@@ -79,6 +85,7 @@ export function evaluateRequiredCiVerdict({
 function verdictFromEnvironment() {
   return evaluateRequiredCiVerdict({
     classification: process.env.CI_CLASSIFICATION_RESULT,
+    dependencyAudit: process.env.CI_DEPENDENCY_AUDIT_RESULT,
     lane: process.env.CI_LANE,
     playwrightReport: process.env.CI_PLAYWRIGHT_REPORT_RESULT,
     playwrightShards: process.env.CI_PLAYWRIGHT_SHARDS_RESULT,

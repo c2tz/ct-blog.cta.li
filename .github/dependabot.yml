@@ -21,10 +21,12 @@ updates:
     commit-message:
       prefix: "chore"
       include: "scope"
+    # Keep compatible families together; supported major updates remain separate PRs.
     ignore:
-      - dependency-name: "typescript"
-        update-types: ["version-update:semver-major"]
+      # Node types follow the supported runtime; lint/check peers need coordinated migrations.
       - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
       - dependency-name: "eslint"
         update-types: ["version-update:semver-major"]
@@ -32,6 +34,36 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "eslint-plugin-astro"
         update-types: ["version-update:semver-major"]
+    groups:
+      astro:
+        patterns:
+          - "astro"
+          - "@astrojs/*"
+          - "sharp"
+        update-types: ["minor", "patch"]
+      lint-typescript:
+        patterns:
+          - "eslint"
+          - "@eslint/*"
+          - "eslint-plugin-*"
+          - "typescript"
+          - "typescript-eslint"
+        update-types: ["minor", "patch"]
+      video:
+        patterns:
+          - "@mux/*"
+          - "media-chrome"
+        update-types: ["minor", "patch"]
+      browser-qa:
+        patterns:
+          - "@playwright/test"
+          - "@lhci/*"
+        update-types: ["minor", "patch"]
+      formatting:
+        patterns:
+          - "prettier"
+          - "prettier-plugin-*"
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
