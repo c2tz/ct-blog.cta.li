@@ -53,6 +53,44 @@ for (const path of ["/pagefind-loader.js", "/pagefind/pagefind.js"]) {
   });
 }
 
+test("offers an explicit reload after the search controls fail to load", async ({ page }) => {
+  let recovered = false;
+  let failures = 0;
+  await page.route(/\/_astro\/search\.[^/]+\.js$/, (route) => {
+    if (recovered) return route.continue();
+    failures += 1;
+    return route.fulfill({ status: 503, contentType: "text/javascript", body: "" });
+  });
+  await gotoRoute(page, "/");
+  await waitForAppReady(page);
+  await page.getByRole("button", { name: "Rechercher", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  const retry = page.getByRole("button", {
+    name: "Recharger la page pour réessayer la recherche",
+    exact: true,
+  });
+  await expect(retry).toBeEnabled();
+  await expect(retry).toBeFocused();
+  await expect(retry).toHaveAttribute("aria-expanded", "false");
+  await expect(retry).not.toHaveAttribute("aria-busy", "true");
+  await expect(page.locator("[data-search-open-status]")).toContainText(
+    "Impossible de charger la recherche",
+  );
+  await expect(page.locator("[data-search-dialog]")).not.toHaveAttribute("open");
+  expect(failures).toBeGreaterThan(0);
+
+  recovered = true;
+  await Promise.all([
+    page.waitForEvent("framenavigated", { predicate: (frame) => frame === page.mainFrame() }),
+    retry.click(),
+  ]);
+  await waitForAppReady(page);
+  const dialog = await openSearch(page);
+  await dialog.getByRole("searchbox", { name: "Mot-clé, titre ou contenu" }).fill("bienvenue");
+  await expect(dialog.locator('a[href="/posts/bienvenue-sur-ct-blog"]')).toBeVisible();
+  await expect(dialog.locator("md-filter-chip").first()).toBeVisible();
+});
+
 for (const failure of ["http", "payload", "timeout"] as const) {
   test(`retries the detailed list after a ${failure} failure`, async ({ page }) => {
     let requests = 0;

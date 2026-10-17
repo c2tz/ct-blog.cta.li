@@ -21,6 +21,10 @@ pnpm check:headers
 
 `pnpm verify` builds first and then checks that the committed hashes match the
 current `dist` output.
+Both checking and synchronizing hashes fail if `dist` is missing or contains no HTML. The
+collector hashes parsed script text without trimming or reserializing it. HTML newline
+normalization (CRLF to LF) matches the browser's CSP calculation. External scripts, comments
+and non-executable data scripts do not contribute hashes.
 
 The `Validate security header hashes` GitHub Action runs with read-only
 repository permissions on every pull request. It derives the expected hashes

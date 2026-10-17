@@ -7,16 +7,17 @@ Il ne compare jamais une pull request à une branche locale supposée.
 
 ## Lanes
 
-| Lane         | Chemins admis                                                                                             | Validation                                                                                 |
-| ------------ | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `docs`       | `guide/**`, documents racine connus et documentation/templates Markdown GitHub                            | Diff/Prettier des documents modifiés et titre de pull request                              |
-| `content`    | `LICENSE*` et fichiers Markdown/MDX sous `src/content/**`                                                 | Formatage, tests unitaires, build/Pagefind, CSP/headers et smoke Chromium ciblé            |
-| `post-merge` | Push d’un unique commit de merge dont la PR et les cinq checks verts sont prouvés par GitHub              | Publication rapide des cinq statuts sans répéter les validations déjà réussies             |
-| `full`       | Code, styles, dépendances, configuration, workflows, rulesets, scripts, tests, assets et chemins inconnus | Suite qualité, huit shards Playwright, Lighthouse, validation CSP complète et vraie CodeQL |
+| Lane         | Chemins admis                                                                                                  | Validation                                                                                                        |
+| ------------ | -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `docs`       | `guide/**`, documents racine connus et documentation/templates Markdown GitHub                                 | Diff/Prettier des documents modifiés et titre de pull request                                                     |
+| `content`    | `LICENSE*` et fichiers Markdown `.md` sous `src/content/**`                                                    | Audit des dépendances, formatage, tests unitaires, build/Pagefind, CSP/headers et smoke Chromium ciblé            |
+| `post-merge` | Push d’un unique commit de merge dont la PR et les cinq checks verts sont prouvés par GitHub                   | Publication rapide des cinq statuts sans répéter les validations déjà réussies                                    |
+| `full`       | Code, MDX, styles, dépendances, configuration, workflows, rulesets, scripts, tests, assets et chemins inconnus | Audit des dépendances, suite qualité, huit shards Playwright, Lighthouse, validation CSP complète et vraie CodeQL |
 
 La priorité est `full` > `content` > `docs`. Les deux chemins d’un renommage sont classés et une
 suppression conserve la classe de son ancien chemin. Un chemin inconnu, un ensemble vide, un SHA
 manquant ou nul, un historique incomplet et toute erreur de diff basculent vers `full`.
+MDX reste dans `full`, car un article peut importer des composants et exécuter des expressions.
 
 Les événements planifiés et manuels sont toujours complets. Un push direct, forcé, multiple ou
 ambigu reste également en `full`, même si son message ressemble à un merge.
@@ -39,13 +40,33 @@ Le check `Check Astro, Material Web, and security headers` est l'unique verdict 
 workflow principal. Il utilise `needs` avec `always()` afin de rester présent après un job interne
 rouge ou ignoré. Sa table fail-closed exige :
 
-- `docs` et `content` : qualité réussie, shards et fusion explicitement ignorés ;
-- `full` : qualité, huit shards et fusion réussis ;
-- `post-merge` : qualité, shards et fusion explicitement ignorés après la preuve GitHub.
+- `docs` : qualité réussie, audit, shards et fusion explicitement ignorés ;
+- `content` : qualité et audit réussis, shards et fusion explicitement ignorés ;
+- `full` : qualité, audit, huit shards et fusion réussis ;
+- `post-merge` : qualité, audit, shards et fusion explicitement ignorés après la preuve GitHub.
 
 Tout résultat absent, annulé, inconnu ou différent de cette table échoue. Les huit shards utilisent
 un worker chacun et `fail-fast: false`. Leurs rapports blob portent des noms distincts, sont vérifiés
 avant fusion et ne partagent jamais le nom du check requis.
+
+Le job qualité produit une seule fois le build de test (`pnpm build:test`) et publie son dossier
+`dist` sous le nom `playwright-test-build-<SHA>`. Les huit shards téléchargent cet artefact du même
+workflow et n'exécutent aucun build. Un échec de qualité ou de téléchargement empêche la validation
+des navigateurs. Lighthouse et les hashes CSP gardent chacun leur build sans routes de test : une
+lane complète effectue donc au plus trois builds, au lieu de onze.
+
+Le build partagé et les rapports blob restent disponibles sept jours pour permettre les relances
+partielles après un échec. Chaque producteur ou shard garde un nom d'artefact distinct et stable ;
+`overwrite: true` remplace l'artefact de même nom lorsqu'il existe déjà. Les jobs réussis qui ne
+sont pas relancés conservent ainsi leurs artefacts utilisables par les jobs dépendants. Après
+expiration ou suppression de ces artefacts, relancer **tout le workflow** pour recréer le build
+et les huit rapports. L'absence d'un build ou d'un rapport requis reste bloquante.
+
+L'audit des dépendances s'exécute dans un job indépendant du build et des navigateurs. Un avis
+nouvellement publié ne masque plus leurs diagnostics, mais un audit échoué bloque toujours le
+verdict requis. Le résumé GitHub et l'artefact `dependency-audit` conservent
+`reports/dependency-audit.json` et `reports/dependency-audit.md`, y compris en cas d'échec. Une erreur
+du registre se distingue des vulnérabilités détectées ; elle ne produit pas de validation verte.
 
 ## Preuve `post-merge`
 

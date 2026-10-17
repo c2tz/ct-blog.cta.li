@@ -103,18 +103,14 @@ test("classifies only explicitly safe documentation paths as docs", () => {
   }
 });
 
-test("classifies licenses and Markdown or MDX collections as content", () => {
-  for (const path of [
-    "LICENSE",
-    "LICENSE.txt",
-    "src/content/blog/article.md",
-    "src/content/blog/article.mdx",
-    "src/content/info/intro.mdx",
-  ]) {
+test("classifies licenses and Markdown collections as content, but executable MDX as full", () => {
+  for (const path of ["LICENSE", "LICENSE.txt", "src/content/blog/article.md"]) {
     assert.equal(laneForPath(path), CI_LANES.content, path);
   }
 
   for (const path of [
+    "src/content/blog/article.mdx",
+    "src/content/info/intro.mdx",
     "src/content/blog/images/hero.webp",
     "src/content/config.ts",
     "public/LICENSE.txt",
@@ -176,7 +172,7 @@ test("parses additions, deletions, copies, and both sides of renames", () => {
     "README.md",
     "README.fr.md",
   ]);
-  assert.equal(classifyChangedPaths(parseNameStatus(output)), CI_LANES.content);
+  assert.equal(classifyChangedPaths(parseNameStatus(output)), CI_LANES.full);
 });
 
 test("rejects incomplete rename records and unsafe names", () => {
@@ -393,6 +389,65 @@ test("fails closed after inspecting multiple-commit and forced pushes", async ()
   }
 });
 
+test("rejects incomplete merge evidence before requesting head checks", async () => {
+  const validPull = mergedPullRequest();
+  for (const pullRequest of [
+    mergedPullRequest({ state: "open" }),
+    mergedPullRequest({ merged_at: null }),
+    mergedPullRequest({ merge_commit_sha: PR_HEAD_SHA }),
+    mergedPullRequest({ base: { ...validPull.base, sha: PR_HEAD_SHA } }),
+    mergedPullRequest({ base: { ...validPull.base, ref: "main" } }),
+    mergedPullRequest({ base: { ...validPull.base, repo: { full_name: "other/repository" } } }),
+    mergedPullRequest({ head: { sha: "incomplete" } }),
+    mergedPullRequest({ number: 0 }),
+  ]) {
+    const paths = [];
+    const classification = await classifyCiEvent({
+      event: pushEvent(),
+      eventName: "push",
+      githubToken: "masked-token",
+      inspectRange: () => ({ commits: [HEAD_SHA] }),
+      repository: REPOSITORY,
+      requestGitHub: async ({ path }) => {
+        paths.push(path);
+        return { data: [pullRequest], link: "" };
+      },
+    });
+    assert.equal(classification.lane, CI_LANES.full);
+    assert.equal(paths.length, 1, JSON.stringify(pullRequest));
+    assert.match(paths[0], /\/pulls\?/);
+  }
+});
+
+test("requires complete successful checks for exactly the validated pull request head", async () => {
+  const validChecks = successfulCheckRuns();
+  const response = (checkRuns, extra = {}) => ({
+    data: { check_runs: checkRuns, total_count: checkRuns.length },
+    link: "",
+    ...extra,
+  });
+  for (const checksResponse of [
+    response([{ ...validChecks[0], head_sha: HEAD_SHA }, ...validChecks.slice(1)]),
+    response([{ ...validChecks[0], status: "in_progress" }, ...validChecks.slice(1)]),
+    response([{ ...validChecks[0], conclusion: "skipped" }, ...validChecks.slice(1)]),
+    response(validChecks, { link: '<next>; rel="next"' }),
+    response(validChecks, {
+      data: { check_runs: validChecks, total_count: validChecks.length + 1 },
+    }),
+  ]) {
+    const classification = await classifyCiEvent({
+      event: pushEvent(),
+      eventName: "push",
+      githubToken: "masked-token",
+      inspectRange: () => ({ commits: [HEAD_SHA] }),
+      repository: REPOSITORY,
+      requestGitHub: async ({ path }) =>
+        path.includes("/pulls?") ? { data: [mergedPullRequest()], link: "" } : checksResponse,
+    });
+    assert.equal(classification.lane, CI_LANES.full, JSON.stringify(checksResponse));
+  }
+});
+
 test("fails closed on a zero push SHA without attempting Git or GitHub", async () => {
   let inspected = false;
   let requested = false;
@@ -586,21 +641,36 @@ test("keeps all required check names aligned and every external action pinned by
     packageJson.scripts["verify:quality:static"],
     /pnpm build:test && pnpm check:headers$/,
   );
-  assert.equal(
-    packageJson.scripts["verify:quality"],
-    "pnpm verify:quality:static && PLAYWRIGHT_REUSE_BUILD=1 pnpm test:e2e",
-  );
+  assert.equal(packageJson.scripts["verify:quality"], "node scripts/verify-project.mjs");
+  assert.doesNotMatch(packageJson.scripts["verify:quality:static"], /audit:dependencies/);
 
-  for (const path of [
-    ".github/workflows/verify-project.yml",
-    ".github/workflows/nightly-browser-qa.yml",
-  ]) {
-    assert.match(
-      readFileSync(path, "utf8"),
-      /name: Build production output with test routes[^\n]*\n\s+env:\n\s+SITE_TEST_FIXTURES: "1"\n\s+run: pnpm build/,
-      `${path} must build the archive fixtures before reusing the output for browser tests`,
-    );
+  const qualityJob = verifyWorkflow
+    .split("  project-quality:\n")[1]
+    .split("  dependency-audit:\n")[0];
+  const shardJob = verifyWorkflow
+    .split("  playwright-shards:\n")[1]
+    .split("  merge-playwright-reports:\n")[0];
+  const auditJob = verifyWorkflow
+    .split("  dependency-audit:\n")[1]
+    .split("  playwright-shards:\n")[0];
+  assert.match(qualityJob, /run: pnpm verify:quality:static/);
+  assert.match(qualityJob, /uses: actions\/upload-artifact@/);
+  assert.match(shardJob, /uses: actions\/download-artifact@/);
+  for (const job of [qualityJob, shardJob]) {
+    assert.match(job, /name: playwright-test-build-\$\{\{ github\.sha \}\}\s+path: dist\//);
   }
+  assert.match(shardJob, /needs:\s+- classify-project-validation\s+- project-quality/);
+  assert.doesNotMatch(shardJob, /run: pnpm build/);
+  assert.match(shardJob, /PLAYWRIGHT_REUSE_BUILD: "1"/);
+  assert.match(auditJob, /needs: classify-project-validation/);
+  assert.doesNotMatch(auditJob, /needs:.*project-quality/);
+  assert.match(auditJob, /run: pnpm audit:dependencies/);
+  assert.match(auditJob, /path: reports\/dependency-audit\.\*/);
+  assert.match(
+    readFileSync(".github/workflows/nightly-browser-qa.yml", "utf8"),
+    /name: Build production output with test routes[^\n]*\n\s+env:\n\s+SITE_TEST_FIXTURES: "1"\n\s+run: pnpm build/,
+    "nightly QA must build the archive fixtures before reusing the output for browser tests",
+  );
 
   for (const check of requiredChecks) {
     assert.equal(workflowText.split(`name: ${check}`).length - 1, 1, check);
@@ -640,10 +710,14 @@ test("keeps all required check names aligned and every external action pinned by
         );
         assert.match(
           jobBlock,
-          /^ {4}needs:\s+ {6}- classify-project-validation\s+ {6}- project-quality\s+ {6}- playwright-shards\s+ {6}- merge-playwright-reports/m,
+          /^ {4}needs:\s+ {6}- classify-project-validation\s+ {6}- dependency-audit\s+ {6}- project-quality\s+ {6}- playwright-shards\s+ {6}- merge-playwright-reports/m,
           `${check} must aggregate every internal project validation job`,
         );
         assert.match(jobBlock, /node scripts\/required-ci-verdict\.mjs/);
+        assert.match(
+          jobBlock,
+          /CI_DEPENDENCY_AUDIT_RESULT: \$\{\{ needs\.dependency-audit\.result \}\}/,
+        );
       } else {
         assert.doesNotMatch(jobBlock, /^ {4}if:/m, `${check} must always be created`);
         assert.doesNotMatch(jobBlock, /^ {4}needs:/m, `${check} must not inherit a skipped job`);
@@ -678,6 +752,8 @@ test("keeps all required check names aligned and every external action pinned by
 
 test("shared project setup preserves locked installs and the preview lifecycle-script restriction", (t) => {
   const action = readFileSync(".github/actions/setup-project/action.yml", "utf8");
+  assert.match(action, /node-version-file: package\.json/);
+  assert.doesNotMatch(action, /^\s+(?:node-version|version):/m);
   const run = action
     .split("      run: |\n")[1]
     .split("\n")

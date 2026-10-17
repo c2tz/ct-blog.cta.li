@@ -5,8 +5,26 @@ import { formatFrenchDate } from "./date-format.mjs";
 
 const cwd = process.cwd();
 const CONTENT_EXTENSIONS = [".md", ".mdx"];
-const GIT_LOG_FORMAT = "%H%x1f%aI%x1f%s";
+const GIT_LOG_FORMAT = "%H%x1f%aI%x1f%s%x1f%P";
 const gitDatesCache = new Map();
+let lastKnownHead;
+
+function readGit(args) {
+  return execFileSync("git", args, {
+    cwd,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "ignore"],
+  }).trim();
+}
+
+function getHeadRevision() {
+  try {
+    lastKnownHead = readGit(["rev-parse", "HEAD"]);
+  } catch {
+    // Preserve the filesystem cache when Git temporarily becomes unavailable.
+  }
+  return lastKnownHead;
+}
 
 export function hasDistinctModification({
   createdAt,
@@ -50,24 +68,31 @@ function normalizeDate(value) {
   return Number.isNaN(date.valueOf()) ? undefined : date.toISOString();
 }
 
-function gitLogEntry(args, filePath, { skipPullRequestSummaries = false } = {}) {
+function getFileHistory(filePath) {
   try {
-    const lines = execFileSync("git", [...args, "--", relative(cwd, filePath)], {
-      cwd,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    })
-      .trim()
-      .split(/\r?\n/);
-
-    for (const line of lines) {
-      const [commit, date, subject = ""] = line.split("\x1f");
-      if (!commit || !date) continue;
-      if (skipPullRequestSummaries && isPullRequestSummaryCommit(subject)) continue;
-      return { commit, date };
-    }
+    // --follow must traverse newest first to discover former paths at renames.
+    const history = readGit([
+      "log",
+      "--follow",
+      `--format=${GIT_LOG_FORMAT}`,
+      "--",
+      relative(cwd, filePath),
+    ])
+      .split(/\r?\n/)
+      .map((line) => {
+        const [commit, date, subject = "", parents = ""] = line.split("\x1f");
+        return { commit, date, subject, isMerge: parents.includes(" ") };
+      })
+      .filter(({ commit, date }) => commit && date);
+    const contentHistory = history.filter(({ subject }) => !isPullRequestSummaryCommit(subject));
+    const nonMergeHistory = contentHistory.filter(({ isMerge }) => !isMerge);
+    return nonMergeHistory.length
+      ? nonMergeHistory
+      : contentHistory.length
+        ? contentHistory
+        : history;
   } catch {
-    return undefined;
+    return [];
   }
 }
 
@@ -86,39 +111,13 @@ function getFileSystemDates(filePath) {
 export function getFileGitDates(filePath) {
   const resolvedPath = resolveFilePath(filePath);
   const signature = getFileSignature(resolvedPath);
+  const head = getHeadRevision();
   const cached = gitDatesCache.get(resolvedPath);
-  if (cached?.signature === signature) return { ...cached.dates };
+  if (cached?.signature === signature && cached.head === head) return { ...cached.dates };
 
-  const created =
-    gitLogEntry(
-      [
-        "log",
-        "--follow",
-        "--no-merges",
-        "--diff-filter=A",
-        "--reverse",
-        `--format=${GIT_LOG_FORMAT}`,
-      ],
-      resolvedPath,
-      { skipPullRequestSummaries: true },
-    ) ||
-    gitLogEntry(
-      ["log", "--follow", "--no-merges", "--reverse", `--format=${GIT_LOG_FORMAT}`],
-      resolvedPath,
-      { skipPullRequestSummaries: true },
-    ) ||
-    gitLogEntry(["log", "--follow", "--reverse", `--format=${GIT_LOG_FORMAT}`], resolvedPath, {
-      skipPullRequestSummaries: true,
-    }) ||
-    gitLogEntry(["log", "--follow", "--reverse", `--format=${GIT_LOG_FORMAT}`], resolvedPath);
-  const modified =
-    gitLogEntry(["log", "--follow", "--no-merges", `--format=${GIT_LOG_FORMAT}`], resolvedPath, {
-      skipPullRequestSummaries: true,
-    }) ||
-    gitLogEntry(["log", "--follow", `--format=${GIT_LOG_FORMAT}`], resolvedPath, {
-      skipPullRequestSummaries: true,
-    }) ||
-    gitLogEntry(["log", "--follow", "-1", `--format=${GIT_LOG_FORMAT}`], resolvedPath);
+  const history = getFileHistory(resolvedPath);
+  const created = history.at(-1);
+  const modified = history[0];
   const fileSystemDates = getFileSystemDates(resolvedPath);
 
   const dates = {
@@ -132,7 +131,7 @@ export function getFileGitDates(filePath) {
       fileSystemDates.createdAt,
     lastModifiedCommit: modified?.commit,
   };
-  gitDatesCache.set(resolvedPath, { dates, signature: getFileSignature(resolvedPath) });
+  gitDatesCache.set(resolvedPath, { dates, head, signature: getFileSignature(resolvedPath) });
   return { ...dates };
 }
 
@@ -161,5 +160,10 @@ function resolveContentEntryPath(collection, entry) {
 }
 
 export function getContentEntryGitDates(collection, entry) {
-  return getFileGitDates(resolveContentEntryPath(collection, entry));
+  const filePath = resolveContentEntryPath(collection, entry);
+  const dates = getFileGitDates(filePath);
+  if (!dates.createdAt || !dates.lastModified) {
+    throw new Error(`Cannot determine content dates for ${filePath}`);
+  }
+  return dates;
 }
