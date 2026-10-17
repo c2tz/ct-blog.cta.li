@@ -343,11 +343,17 @@ test("keeps the Material rich tooltip anchored and enhances all of its rich cont
       const rect = element.getBoundingClientRect();
       const surfaceRect = surface?.getBoundingClientRect();
       const styles = getComputedStyle(element);
+      const initialScrollLeft = element.scrollLeft;
+      element.scrollLeft = element.scrollWidth;
+      const canScrollHorizontally = element.scrollLeft > 0;
+      element.scrollLeft = initialScrollLeft;
       return {
         boxSizing: styles.boxSizing,
+        canScrollHorizontally,
         contained: Boolean(
           surfaceRect && rect.left >= surfaceRect.left - 1 && rect.right <= surfaceRect.right + 1,
         ),
+        horizontalOverflow: element.scrollWidth - element.clientWidth,
         overflowX: styles.overflowX,
         overflowY: styles.overflowY,
         whiteSpace: styles.whiteSpace,
@@ -359,7 +365,13 @@ test("keeps the Material rich tooltip anchored and enhances all of its rich cont
     overflowY: "auto",
     whiteSpace: "pre",
   });
-  expect(["auto", "hidden"]).toContain(shikiMetrics.overflowX);
+  if (shikiMetrics.horizontalOverflow > 1) {
+    expect(shikiMetrics.canScrollHorizontally).toBe(true);
+    expect(shikiMetrics.overflowX).toBe("auto");
+    await expect(popover.locator("pre.astro-code").first()).toHaveAttribute("tabindex", "0");
+  } else {
+    expect(["auto", "hidden", "clip"]).toContain(shikiMetrics.overflowX);
+  }
 
   await trigger.focus();
   await page.keyboard.press("Tab");
