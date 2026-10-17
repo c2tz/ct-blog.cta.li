@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import { readFile, stat } from "node:fs/promises";
 import { htmlFilesIn } from "./file-listing.mjs";
+import { parse } from "parse5";
+import { getAttribute, walkElements } from "./html-nodes.mjs";
 
 const JAVASCRIPT_SCRIPT_TYPES = new Set([
   "application/ecmascript",
@@ -10,33 +12,33 @@ const JAVASCRIPT_SCRIPT_TYPES = new Set([
   "text/javascript",
 ]);
 
-function scriptType(openingTag) {
-  const match = openingTag.match(/\btype\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
-  return match?.[1] ?? match?.[2] ?? match?.[3] ?? "";
-}
-
-function isExecutableInlineScript(openingTag) {
-  const type = scriptType(openingTag).split(";")[0].trim().toLowerCase();
+function isExecutableInlineScript(element) {
+  if (element.tagName !== "script" || getAttribute(element, "src") !== undefined) return false;
+  const type = (getAttribute(element, "type") ?? "").split(";")[0].trim().toLowerCase();
 
   return !type || JAVASCRIPT_SCRIPT_TYPES.has(type);
 }
 
 export async function collectExecutableInlineScriptHashes(directory) {
-  try {
-    if (!(await stat(directory)).isDirectory()) return [];
-  } catch {
-    return [];
+  const stats = await stat(directory).catch(() => null);
+  if (!stats?.isDirectory()) {
+    throw new Error(`Built HTML directory missing: ${directory}. Run pnpm build first.`);
+  }
+  const files = await htmlFilesIn(directory);
+  if (files.length === 0) {
+    throw new Error(`No built HTML found in ${directory}. Run pnpm build first.`);
   }
 
   const hashes = new Set();
 
-  for (const file of await htmlFilesIn(directory)) {
+  for (const file of files) {
     const html = await readFile(file, "utf8");
-    const inlineScriptPattern = /(<script\b(?![^>]*\bsrc=)[^>]*>)([\s\S]*?)<\/script>/gi;
-
-    for (const match of html.matchAll(inlineScriptPattern)) {
-      if (!isExecutableInlineScript(match[1])) continue;
-      hashes.add(`'sha256-${createHash("sha256").update(match[2]).digest("base64")}'`);
+    const document = parse(html);
+    for (const element of walkElements(document)) {
+      if (!isExecutableInlineScript(element)) continue;
+      // CSP hashes the browser-parsed script text, including HTML newline normalization.
+      const source = element.childNodes.map((node) => node.value ?? "").join("");
+      hashes.add(`'sha256-${createHash("sha256").update(source).digest("base64")}'`);
     }
   }
 

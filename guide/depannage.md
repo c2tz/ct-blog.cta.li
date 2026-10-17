@@ -10,7 +10,7 @@ node --version
 pnpm --version
 ```
 
-Les versions de référence sont Node.js `22.22.3` et pnpm `11.1.3`.
+Les versions de référence sont Node.js `22.23.3` et pnpm `11.1.3`.
 
 ## `pnpm` est introuvable
 

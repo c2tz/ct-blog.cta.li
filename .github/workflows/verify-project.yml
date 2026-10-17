@@ -82,9 +82,20 @@ jobs:
         if: needs.classify-project-validation.outputs.lane == 'full'
         run: pnpm verify:quality:static
 
+      - name: Share the verified build with test routes
+        if: needs.classify-project-validation.outputs.lane == 'full'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: playwright-test-build-${{ github.sha }}
+          path: dist/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+          overwrite: true
+
       - name: Upload content smoke failure artifacts
         if: ${{ (failure() || cancelled()) && needs.classify-project-validation.outputs.lane == 'content' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: playwright-content-smoke-failure-artifacts
           path: |
@@ -92,12 +103,53 @@ jobs:
             test-results/
           if-no-files-found: ignore
           retention-days: 14
+          overwrite: true
+
+  dependency-audit:
+    name: Audit locked dependencies
+    needs: classify-project-validation
+    if: ${{ needs.classify-project-validation.result == 'success' && (needs.classify-project-validation.outputs.lane == 'full' || needs.classify-project-validation.outputs.lane == 'content') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup project
+        uses: ./.github/actions/setup-project
+        with:
+          ignore-scripts: "true"
+
+      - name: Audit the locked dependency graph
+        run: pnpm audit:dependencies
+
+      - name: Publish dependency audit summary
+        if: ${{ always() }}
+        run: |
+          if [[ -f reports/dependency-audit.md ]]; then
+            cat reports/dependency-audit.md >>"$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Preserve dependency audit diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: dependency-audit
+          path: reports/dependency-audit.*
+          if-no-files-found: warn
+          retention-days: 14
+          overwrite: true
 
   playwright-shards:
     # Keep this static: GitHub does not populate the matrix context when this
     # job is skipped, otherwise the UI exposes the unevaluated expression.
     name: Playwright shards
-    needs: classify-project-validation
+    needs:
+      - classify-project-validation
+      - project-quality
     if: ${{ needs.classify-project-validation.result == 'success' && needs.classify-project-validation.outputs.lane == 'full' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -120,10 +172,11 @@ jobs:
       - name: Install Playwright Chromium and WebKit
         run: pnpm exec playwright install --with-deps chromium webkit
 
-      - name: Build production output with test routes for this shard
-        env:
-          SITE_TEST_FIXTURES: "1"
-        run: pnpm build
+      - name: Download the verified build with test routes
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: playwright-test-build-${{ github.sha }}
+          path: dist/
 
       - name: Run Playwright shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
         timeout-minutes: 20
@@ -138,21 +191,23 @@ jobs:
 
       - name: Upload mergeable Playwright blob report
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: playwright-blob-report-${{ matrix.shardIndex }}
           path: blob-report/report-${{ matrix.shardIndex }}.zip
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 7
+          overwrite: true
 
       - name: Upload Playwright shard failure artifacts
         if: ${{ failure() || cancelled() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: playwright-failure-artifacts-shard-${{ matrix.shardIndex }}
           path: test-results/
           if-no-files-found: ignore
           retention-days: 14
+          overwrite: true
 
   merge-playwright-reports:
     name: Merge Playwright shard reports
@@ -173,7 +228,7 @@ jobs:
         uses: ./.github/actions/setup-project
 
       - name: Download Playwright blob reports
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           path: all-blob-reports
           pattern: playwright-blob-report-*
@@ -187,17 +242,19 @@ jobs:
 
       - name: Upload merged Playwright report
         if: ${{ always() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: playwright-html-report
           path: playwright-report/
           if-no-files-found: ignore
           retention-days: 14
+          overwrite: true
 
   check-build-and-headers:
     name: Check Astro, Material Web, and security headers
     needs:
       - classify-project-validation
+      - dependency-audit
       - project-quality
       - playwright-shards
       - merge-playwright-reports
@@ -212,13 +269,14 @@ jobs:
           persist-credentials: false
 
       - name: Setup Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version: 22.22.3
+          node-version-file: package.json
 
       - name: Require the complete lane-specific validation result
         env:
           CI_CLASSIFICATION_RESULT: ${{ needs.classify-project-validation.result }}
+          CI_DEPENDENCY_AUDIT_RESULT: ${{ needs.dependency-audit.result }}
           CI_LANE: ${{ needs.classify-project-validation.outputs.lane }}
           CI_PLAYWRIGHT_REPORT_RESULT: ${{ needs.merge-playwright-reports.result }}
           CI_PLAYWRIGHT_SHARDS_RESULT: ${{ needs.playwright-shards.result }}
@@ -271,8 +329,9 @@ jobs:
 
       - name: Upload Lighthouse CI quality reports
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: lighthouse-ci-quality-reports
           path: lighthouse-reports/
           if-no-files-found: ignore
+          overwrite: true

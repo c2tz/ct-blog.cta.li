@@ -36,7 +36,8 @@ const DOCUMENTATION_PATHS = [
   /^\.github\/(?:ISSUE_TEMPLATE|PULL_REQUEST_TEMPLATE)\/.+\.md$/i,
 ];
 
-const CONTENT_PATHS = [/^LICENSE(?:\.[^/]+)?$/i, /^src\/content\/.+\.(?:md|mdx)$/i];
+// MDX can import components and execute expressions, so it needs the full lane.
+const CONTENT_PATHS = [/^LICENSE(?:\.[^/]+)?$/i, /^src\/content\/.+\.md$/i];
 
 function normalizedPath(value) {
   if (typeof value !== "string" || !value || value.includes("\0") || value.includes("\\")) {
@@ -242,6 +243,56 @@ export async function requestGitHubJson({ path, token }) {
   };
 }
 
+function requireMergedPullRequest(response, { afterSha, beforeSha, branch, repository }) {
+  if (hasNextPage(response) || !Array.isArray(response.data) || response.data.length !== 1) {
+    throw new Error(
+      "The merge commit has an absent, ambiguous, or paginated pull request association.",
+    );
+  }
+
+  const pullRequest = response.data[0];
+  if (
+    pullRequest?.state !== "closed" ||
+    typeof pullRequest?.merged_at !== "string" ||
+    !pullRequest.merged_at ||
+    pullRequest?.merge_commit_sha !== afterSha ||
+    pullRequest?.base?.ref !== branch ||
+    pullRequest?.base?.sha !== beforeSha ||
+    pullRequest?.base?.repo?.full_name !== repository ||
+    !Number.isInteger(pullRequest?.number) ||
+    pullRequest.number < 1 ||
+    !isCompleteObjectId(pullRequest?.head?.sha)
+  ) {
+    throw new Error("The associated pull request is not a proven merge into the pushed branch.");
+  }
+  return pullRequest;
+}
+
+function requireSuccessfulChecks(response, headSha) {
+  const checkRuns = response.data?.check_runs;
+  if (
+    hasNextPage(response) ||
+    !Array.isArray(checkRuns) ||
+    response.data?.total_count !== checkRuns.length
+  ) {
+    throw new Error("The pull request head check-run result is incomplete or paginated.");
+  }
+
+  for (const name of REQUIRED_CHECK_NAMES) {
+    const matches = checkRuns.filter((check) => check?.name === name);
+    if (
+      matches.length !== 1 ||
+      matches[0]?.head_sha !== headSha ||
+      matches[0]?.status !== "completed" ||
+      matches[0]?.conclusion !== "success"
+    ) {
+      throw new Error(
+        `Required pull request check ${name} is missing, ambiguous, or not successful.`,
+      );
+    }
+  }
+}
+
 async function classifyPushEvent({ event, githubToken, inspectRange, repository, requestGitHub }) {
   const beforeSha = event?.before;
   const afterSha = event?.after;
@@ -281,63 +332,23 @@ async function classifyPushEvent({ event, githubToken, inspectRange, repository,
   }
 
   try {
-    const pullsPath =
-      `/repos/${encodeURIComponent(parts.owner)}/${encodeURIComponent(parts.repo)}` +
-      `/commits/${afterSha}/pulls?per_page=100&page=1`;
-    const pullsResponse = await requestGitHub({ path: pullsPath, token: githubToken });
-    if (
-      hasNextPage(pullsResponse) ||
-      !Array.isArray(pullsResponse.data) ||
-      pullsResponse.data.length !== 1
-    ) {
-      return full(
-        "The merge commit has an absent, ambiguous, or paginated pull request association.",
-      );
-    }
-
-    const pullRequest = pullsResponse.data[0];
-    const headSha = pullRequest?.head?.sha;
-    if (
-      pullRequest?.state !== "closed" ||
-      typeof pullRequest?.merged_at !== "string" ||
-      !pullRequest.merged_at ||
-      pullRequest?.merge_commit_sha !== afterSha ||
-      pullRequest?.base?.ref !== branchMatch[1] ||
-      pullRequest?.base?.sha !== beforeSha ||
-      pullRequest?.base?.repo?.full_name !== repository ||
-      !Number.isInteger(pullRequest?.number) ||
-      pullRequest.number < 1 ||
-      !isCompleteObjectId(headSha)
-    ) {
-      return full("The associated pull request is not a proven merge into the pushed branch.");
-    }
-
-    const checksPath =
-      `/repos/${encodeURIComponent(parts.owner)}/${encodeURIComponent(parts.repo)}` +
-      `/commits/${headSha}/check-runs?filter=latest&per_page=100&page=1`;
-    const checksResponse = await requestGitHub({ path: checksPath, token: githubToken });
-    const checkRuns = checksResponse.data?.check_runs;
-    if (
-      hasNextPage(checksResponse) ||
-      !Array.isArray(checkRuns) ||
-      checksResponse.data?.total_count !== checkRuns.length
-    ) {
-      return full("The pull request head check-run result is incomplete or paginated.");
-    }
-
-    for (const name of REQUIRED_CHECK_NAMES) {
-      const matches = checkRuns.filter((check) => check?.name === name);
-      if (
-        matches.length !== 1 ||
-        matches[0]?.head_sha !== headSha ||
-        matches[0]?.status !== "completed" ||
-        matches[0]?.conclusion !== "success"
-      ) {
-        return full(
-          `Required pull request check ${name} is missing, ambiguous, or not successful.`,
-        );
-      }
-    }
+    const commitsPath = `/repos/${encodeURIComponent(parts.owner)}/${encodeURIComponent(parts.repo)}/commits`;
+    const pullsResponse = await requestGitHub({
+      path: `${commitsPath}/${afterSha}/pulls?per_page=100&page=1`,
+      token: githubToken,
+    });
+    const pullRequest = requireMergedPullRequest(pullsResponse, {
+      afterSha,
+      beforeSha,
+      branch: branchMatch[1],
+      repository,
+    });
+    const headSha = pullRequest.head.sha;
+    const checksResponse = await requestGitHub({
+      path: `${commitsPath}/${headSha}/check-runs?filter=latest&per_page=100&page=1`,
+      token: githubToken,
+    });
+    requireSuccessfulChecks(checksResponse, headSha);
 
     return {
       afterSha,
