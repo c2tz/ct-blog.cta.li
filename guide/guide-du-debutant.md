@@ -46,9 +46,9 @@ Installez :
 - Node.js dans une version acceptée par `package.json` ;
 - pnpm `11.1.3`.
 
-La version de référence de Node.js est `22.22.3`. Les versions `24.11.1` ou toute version stable à
+La version de référence de Node.js est `22.23.3`. Les versions `24.11.1` ou toute version stable à
 partir de `26.0.0` sont également acceptées par le projet. Pour obtenir un environnement identique à
-la CI, utilisez de préférence Node.js `22.22.3`.
+la CI, utilisez de préférence Node.js `22.23.3`.
 
 Volta est facultatif. S'il est installé, il lit automatiquement les versions indiquées dans
 `package.json`.
