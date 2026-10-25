@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -23,7 +23,10 @@ async function fixture(t, { build = true } = {}) {
   );
   if (build) {
     await mkdir(join(root, "dist/article"), { recursive: true });
+    await mkdir(join(root, "dist/_astro"), { recursive: true });
     await writeFile(join(root, "dist/index.html"), "<!doctype html><h1>Preview fixture</h1>");
+    await writeFile(join(root, "dist/_astro/site.a1b2c3.css"), "body { color: blue; }");
+    await writeFile(join(root, "dist/settings.json"), '{"current":true}');
     await writeFile(
       join(root, "dist/article/index.html"),
       "<!doctype html><h1>Article fixture</h1>",
@@ -83,6 +86,43 @@ async function ready(server, port) {
   }
   throw new Error(`Preview did not become ready: ${server.output()}`);
 }
+
+test(
+  "matches production asset caching while preserving document revalidation",
+  { timeout: 15_000 },
+  async (t) => {
+    const root = await fixture(t);
+    const port = await availablePort();
+    const server = launch(t, root, port);
+    const documentResponse = await ready(server, port);
+    const base = `http://127.0.0.1:${port}`;
+    const configuration = JSON.parse(
+      await readFile(new URL("../vercel.json", import.meta.url), "utf8"),
+    );
+    const cacheControl = configuration.headers
+      .find((rule) => rule.source === "/_astro/(.*)")
+      .headers.find((header) => header.key === "Cache-Control").value;
+
+    const asset = await fetch(`${base}/_astro/site.a1b2c3.css?cache-check=1`);
+    assert.equal(asset.status, 200);
+    assert.equal(asset.headers.get("cache-control"), cacheControl);
+    assert.equal(asset.headers.get("x-test-preview"), "preserved");
+    assert.match(await asset.text(), /color: blue/);
+    const etag = asset.headers.get("etag");
+    assert.ok(etag);
+    const conditional = await fetch(`${base}/_astro/site.a1b2c3.css?cache-check=1`, {
+      headers: { "If-None-Match": etag },
+    });
+    assert.equal(conditional.status, 304);
+    assert.equal(conditional.headers.get("cache-control"), cacheControl);
+
+    assert.equal(documentResponse.headers.get("cache-control"), "no-cache");
+    const publicFile = await fetch(`${base}/settings.json`);
+    assert.equal(publicFile.status, 200);
+    assert.equal(publicFile.headers.get("cache-control"), "no-cache");
+    assert.deepEqual(await publicFile.json(), { current: true });
+  },
+);
 
 for (const signal of ["SIGINT", "SIGTERM"]) {
   test(
