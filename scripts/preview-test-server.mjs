@@ -19,6 +19,14 @@ async function main() {
     server: { host: "127.0.0.1", port, open: false },
     vite: { preview: { strictPort: true } },
   });
+  // Match the production /_astro/ rule in vercel.json for content-hashed assets.
+  // Astro excludes user Vite plugins from preview, so set this before its handler.
+  server.server.prependListener("request", (request, response) => {
+    const pathname = URL.parse(request.url ?? "/", "http://localhost")?.pathname;
+    if (pathname?.startsWith("/_astro/")) {
+      response.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    }
+  });
   let stopping;
   const stop = () => {
     process.exitCode ??= 0;
