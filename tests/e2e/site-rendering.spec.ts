@@ -11,6 +11,7 @@ import {
   waitForAppReady,
   waitForNativeEnhancement,
 } from "./site-fixture";
+import { readFile } from "node:fs/promises";
 
 test("enhances the Markdown video in French without preloading video data on page load", async ({
   page,
@@ -32,10 +33,56 @@ test("enhances the Markdown video in French without preloading video data on pag
   await expect(figure).toHaveCount(1);
   await expect(figure.locator(".site-video-start")).toHaveCount(0);
   await expect(figure.locator("mux-player")).toHaveCount(1);
+  // Compare the installed Mux theme with the browser registry so an upstream
+  // theme update cannot silently introduce an unregistered custom control.
+  const theme = await readFile(new URL(import.meta.resolve("@mux/mux-player/base")), "utf8");
+  const controls = [...new Set(theme.match(/<media-[a-z-]+/g)?.map((tag) => tag.slice(1)))];
+  expect(controls.length).toBeGreaterThan(0);
+  await expect
+    .poll(() => page.evaluate((tags) => tags.filter((tag) => !customElements.get(tag)), controls))
+    .toEqual([]);
+  const player = figure.locator("mux-player");
+  await expect(player.locator('media-play-button[part~="center"]')).toBeVisible();
+  await expect(player.locator("media-time-range")).toHaveCount(1);
+  await expect(player.locator("media-fullscreen-button")).toHaveCount(1);
   await expect(page.locator("pre code").filter({ hasText: '{{< video src="' })).toHaveCount(1);
   expect(requests.some((url) => /\.(m3u8|m4s|mp4|ts)(?:\?|$)/.test(url))).toBe(false);
   expect(requests.some((url) => /https:\/\/[^/]*(?:mux\.com|litix\.io)/.test(url))).toBe(false);
   await expectNoPageOverflow(page);
+});
+
+test("plays and pauses a local video with the registered Mux controls", async ({ page }) => {
+  // Six seconds of synthetic H.264 canvas animation (160 × 90, no audio).
+  const video = await readFile(new URL("../fixtures/video/controls.mp4", import.meta.url));
+  await page.route("**/test-controls.mp4", (route) =>
+    route.fulfill({ contentType: "video/mp4", body: video }),
+  );
+  await page.route("**/__video-preview/videos/test-mux/v1/poster.webp", (route) =>
+    route.fulfill({
+      contentType: "image/svg+xml",
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="9"></svg>',
+    }),
+  );
+  await gotoRoute(page, "/posts/catalogue-redaction#vidéo-avec-choix-de-qualité");
+  const player = page.locator("mux-player");
+  await expect(player).toHaveCount(1);
+  await player.evaluate((element) => {
+    element.setAttribute("src", "/test-controls.mp4");
+    element.setAttribute("loop", "");
+  });
+  await player.locator('media-play-button[part~="center"]').click();
+  await expect(player).toHaveJSProperty("paused", false);
+  await expect
+    .poll(() => player.evaluate((element) => (element as HTMLVideoElement).currentTime))
+    .toBeGreaterThan(0);
+  // The active control is centered on narrow players and in the bottom bar on desktop.
+  const pause = player.locator('media-play-button:not([part~="pre-play"]):visible');
+  await pause.click();
+  await expect(player).toHaveJSProperty("paused", true);
+  await expect(player.locator("media-time-range")).toBeVisible();
+  await expect(player.locator("media-fullscreen-button")).toBeVisible();
+  await pause.click();
+  await expect(player).toHaveJSProperty("paused", false);
 });
 
 test("switches all Material menus and search dialogs between normal and quick motion", async ({
