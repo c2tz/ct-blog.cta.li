@@ -771,9 +771,10 @@ export function initSiteSearchTriggers() {
           controller?.syncSortControl();
         }
         await showPromise;
-        window.requestAnimationFrame(() => {
-          window.requestAnimationFrame(() => focusSiteSearchPanel(panel));
-        });
+        // Set the initial focus before re-enabling the trigger. A delayed focus
+        // can close a select the user has already opened after the animation.
+        // Preserve a control chosen while the dialog was opening as well.
+        if (dialog.open && !panel.matches(":focus-within")) focusSiteSearchPanel(panel);
       } catch {
         // Browsers cache failed ESM fetches. Offer an explicit reload instead
         // of leaving an unusable trigger or repeatedly importing the same URL.
