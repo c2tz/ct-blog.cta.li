@@ -25,7 +25,7 @@ importers:
         version: 7.3.4
       '@astrojs/mdx':
         specifier: ^8.1.1
-        version: 8.1.1(@astrojs/markdown-remark@7.3.4)(@astrojs/markdown-satteri@0.4.5)(astro@7.4.2(@astrojs/markdown-remark@7.3.4)(@types/node@22.20.5)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.106.1)(terser@5.50.0)(tsx@4.23.15)(yaml@2.9.1))
+        version: 8.1.1(@astrojs/markdown-remark@7.3.4)(@astrojs/markdown-satteri@0.4.5)(astro@7.4.2(@astrojs/markdown-remark@7.3.4)(@types/node@22.20.5)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.107.0)(terser@5.50.0)(tsx@4.23.15)(yaml@2.9.1))
       '@astrojs/rss':
         specifier: ^4.0.19
         version: 4.0.19
@@ -49,7 +49,7 @@ importers:
         version: 2.0.0(react@19.2.8)
       astro:
         specifier: ^7.4.2
-        version: 7.4.2(@astrojs/markdown-remark@7.3.4)(@types/node@22.20.5)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.106.1)(terser@5.50.0)(tsx@4.23.15)(yaml@2.9.1)
+        version: 7.4.2(@astrojs/markdown-remark@7.3.4)(@types/node@22.20.5)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.107.0)(terser@5.50.0)(tsx@4.23.15)(yaml@2.9.1)
       fonteditor-core:
         specifier: ^2.6.3
         version: 2.6.3
@@ -136,8 +136,8 @@ importers:
         specifier: ^1.1.1
         version: 1.1.1(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(prettier@3.9.10)
       sass:
-        specifier: ^1.106.1
-        version: 1.106.1
+        specifier: ^1.107.0
+        version: 1.107.0
       semver:
         specifier: ^7.8.5
         version: 7.8.5
@@ -4315,8 +4315,8 @@ packages:
     resolution: {integrity: sha512-Nf4eMGE2O5vnJG7KPCRyksWS9gVKSYoUWtPeMXRRxwZSPVQhSGtL602xVYS65LvMkHmkvKa7xpauF0+/5pPwrg==}
     hasBin: true
 
-  sass@1.106.1:
-    resolution: {integrity: sha512-kD+Gi66vycZcbJt+42NC4z4PXNMcCajVrJPhqoKKXy5cOBMmJQt052CxIBcRjwYXeImHYOpu/ydWWGZQIenl7A==}
+  sass@1.107.0:
+    resolution: {integrity: sha512-+whPilvVNoAD57xvdIPLQT0gXo4RD1lHYw+Uw8zYHlojaeaMDxK14tc0JmEsz/XMns48h3lpypisMP+3E8eHQA==}
     engines: {node: '>=20.19.0'}
     hasBin: true
 
@@ -5410,11 +5410,11 @@ snapshots:
       github-slugger: 2.0.0
       satteri: 0.10.5
 
-  '@astrojs/mdx@8.1.1(@astrojs/markdown-remark@7.3.4)(@astrojs/markdown-satteri@0.4.5)(astro@7.4.2(@astrojs/markdown-remark@7.3.4)(@types/node@22.20.5)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.106.1)(terser@5.50.0)(tsx@4.23.15)(yaml@2.9.1))':
+  '@astrojs/mdx@8.1.1(@astrojs/markdown-remark@7.3.4)(@astrojs/markdown-satteri@0.4.5)(astro@7.4.2(@astrojs/markdown-remark@7.3.4)(@types/node@22.20.5)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.107.0)(terser@5.50.0)(tsx@4.23.15)(yaml@2.9.1))':
     dependencies:
       '@astrojs/internal-helpers': 0.13.0
       '@astrojs/markdown-satteri': 0.4.5
-      astro: 7.4.2(@astrojs/markdown-remark@7.3.4)(@types/node@22.20.5)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.106.1)(terser@5.50.0)(tsx@4.23.15)(yaml@2.9.1)
+      astro: 7.4.2(@astrojs/markdown-remark@7.3.4)(@types/node@22.20.5)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.107.0)(terser@5.50.0)(tsx@4.23.15)(yaml@2.9.1)
       es-module-lexer: 3.0.4
     optionalDependencies:
       '@astrojs/markdown-remark': 7.3.4
@@ -6933,7 +6933,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  astro@7.4.2(@astrojs/markdown-remark@7.3.4)(@types/node@22.20.5)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.106.1)(terser@5.50.0)(tsx@4.23.15)(yaml@2.9.1):
+  astro@7.4.2(@astrojs/markdown-remark@7.3.4)(@types/node@22.20.5)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.107.0)(terser@5.50.0)(tsx@4.23.15)(yaml@2.9.1):
     dependencies:
       '@astrojs/compiler-rs': 0.5.2
       '@astrojs/internal-helpers': 0.13.0
@@ -6982,8 +6982,8 @@ snapshots:
       unifont: 1.0.3
       unstorage: 1.17.6
       verkit: 0.5.0
-      vite: 8.3.5(@types/node@22.20.5)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.106.1)(terser@5.50.0)(tsx@4.23.15)(yaml@2.9.1)
-      vitefu: 1.1.3(vite@8.3.5(@types/node@22.20.5)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.106.1)(terser@5.50.0)(tsx@4.23.15)(yaml@2.9.1))
+      vite: 8.3.5(@types/node@22.20.5)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.107.0)(terser@5.50.0)(tsx@4.23.15)(yaml@2.9.1)
+      vitefu: 1.1.3(vite@8.3.5(@types/node@22.20.5)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.107.0)(terser@5.50.0)(tsx@4.23.15)(yaml@2.9.1))
       xxhash-wasm: 1.1.0
       yargs-parser: 22.0.0
       zod: 4.6.7
@@ -9985,7 +9985,7 @@ snapshots:
     dependencies:
       suf-log: 2.5.3
 
-  sass@1.106.1:
+  sass@1.107.0:
     dependencies:
       chokidar: 5.0.0
       immutable: 5.1.8
@@ -10605,7 +10605,7 @@ snapshots:
       '@types/unist': 3.0.3
       vfile-message: 4.0.3
 
-  vite@8.3.5(@types/node@22.20.5)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.106.1)(terser@5.50.0)(tsx@4.23.15)(yaml@2.9.1):
+  vite@8.3.5(@types/node@22.20.5)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.107.0)(terser@5.50.0)(tsx@4.23.15)(yaml@2.9.1):
     dependencies:
       lightningcss: 1.33.0
       picomatch: 4.0.7
@@ -10617,14 +10617,14 @@ snapshots:
       esbuild: 0.28.1
       fsevents: 2.3.3
       jiti: 2.7.0
-      sass: 1.106.1
+      sass: 1.107.0
       terser: 5.50.0
       tsx: 4.23.15
       yaml: 2.9.1
 
-  vitefu@1.1.3(vite@8.3.5(@types/node@22.20.5)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.106.1)(terser@5.50.0)(tsx@4.23.15)(yaml@2.9.1)):
+  vitefu@1.1.3(vite@8.3.5(@types/node@22.20.5)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.107.0)(terser@5.50.0)(tsx@4.23.15)(yaml@2.9.1)):
     optionalDependencies:
-      vite: 8.3.5(@types/node@22.20.5)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.106.1)(terser@5.50.0)(tsx@4.23.15)(yaml@2.9.1)
+      vite: 8.3.5(@types/node@22.20.5)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.107.0)(terser@5.50.0)(tsx@4.23.15)(yaml@2.9.1)
 
   volar-service-css@0.0.71(@volar/language-service@2.4.28):
     dependencies:
