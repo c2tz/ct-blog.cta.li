@@ -175,13 +175,24 @@ parseur Astro 2 sous le plugin 1 sort de sa plage prise en charge. De même, LHC
 Chaque override impose une résolution différente de celle du parent. Avant d’en ajouter un,
 vérifier qu’un simple renouvellement du lockfile dans la plage existante ne suffit pas. Les
 correctifs rétroportés de `brace-expansion` permettent maintenant à chaque parent de conserver son
-API : le forçage global vers la version 5 et le patch de `minimatch` ont été retirés. Les corrections
+API : son ancien forçage global vers la version 5 a été retiré. Les corrections
 `fast-uri` et `ip-address` sont également résolues naturellement dans le lockfile.
+
+L'avis `GHSA-g3hv-75wg-m249` de `minimatch` exige désormais la version 11.0.1 ou supérieure.
+L'override utilise 11.0.3 ; le patch pnpm ajoute seulement les exports appelables CommonJS et ESM
+attendus par ESLint 9 et ses plugins, sans modifier le moteur corrigé. Les imports nommés modernes
+restent disponibles. LHCI utilise `chrome-launcher` 1.2.2 pour retirer sa chaîne `rimraf`/`glob`
+ancienne, incompatible avec les objets de correspondance de minimatch 11. Son appel à
+`Launcher.getInstallations()` reste disponible sous Node 22. Les tests de compatibilité contrôlent
+les exports, les motifs, la borne d'amplification et le chargement réel de LHCI ; les deux profils
+Lighthouse vérifient ensuite la collecte complète.
 
 | Override                                                                                   | Motif / contrôle                                                                                       | Condition de suppression                                                                       |
 | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
 | `get-uri>basic-ftp`                                                                        | GHSA-c475-qrg2-pj4r ; les méthodes `Client` utilisées par get-uri restent disponibles en 6.x           | get-uri accepte une version corrigée dans sa propre plage                                      |
 | `lighthouse@12.6.1`                                                                        | Version de Lighthouse compatible avec les contrôles du projet ; vérifier les deux profils LHCI         | LHCI adopte cette génération de Lighthouse                                                     |
+| `minimatch@<11.0.1` et son patch d'exports                                                 | GHSA-g3hv-75wg-m249 ; API utilisée par ESLint, tests de motifs et de borne d'amplification             | Les parents acceptent une version corrigée et ses exports nommés                               |
+| `@lhci/cli>chrome-launcher`                                                                | Supprime la chaîne glob ancienne ; chargement LHCI sous Node 22 et collecte Lighthouse                 | LHCI adopte chrome-launcher 1.x ou supérieur                                                   |
 | `@xmldom/xmldom`, `esbuild`, `fast-xml-parser`, `fflate`, `immutable`, `qs`, `tmp`, `uuid` | Correctifs transitifs hérités ; audit, unités, build et Lighthouse couvrent les parents correspondants | Retirer individuellement lorsque la résolution normale conserve une version sans avis bloquant |
 
 La dérogation de peer dependency `proxy-agent` accompagne encore LHCI/Lighthouse : elle doit être
