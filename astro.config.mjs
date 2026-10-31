@@ -13,6 +13,7 @@ import {
 import { defineConfig } from "astro/config";
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import rehypeSlug from "rehype-slug";
 import { getFileGitDates } from "./src/lib/git-dates.mjs";
@@ -128,6 +129,16 @@ export default defineConfig({
   ],
   vite: {
     customLogger: viteLogger,
+    resolve: {
+      alias: [
+        {
+          find: /^media-chrome(?:\/dist\/menu)?$/,
+          replacement: fileURLToPath(
+            new URL("./src/assets/js/app/video-media-chrome.js", import.meta.url),
+          ),
+        },
+      ],
+    },
     plugins: [disableRedundantClientModulePreloads],
     optimizeDeps: {
       include: [
