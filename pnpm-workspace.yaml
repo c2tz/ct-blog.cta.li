@@ -9,11 +9,15 @@ overrides:
   "@xmldom/xmldom@^0.8.0": 0.8.15
   # get-uri uses the unchanged Client API; remove when it accepts basic-ftp 6.
   "get-uri>basic-ftp": ^6.2.1
+  # LHCI only uses Launcher.getInstallations(); v1 drops the legacy glob chain.
+  "@lhci/cli>chrome-launcher": 1.2.2
   esbuild: 0.28.1
   fast-xml-parser: 5.10.1
   fflate@0.7.3: 0.7.5
   immutable: 5.1.8
   lighthouse@12.6.1: 13.4.1
+  # The security fix is only available in v11; its patch preserves legacy exports.
+  minimatch@<11.0.1: 11.0.3
   qs: 6.16.1
   tmp: 0.2.7
   uuid: 11.1.1
@@ -29,3 +33,6 @@ peerDependencyRules:
   # Puppeteer only uses the ProxyAgent constructor, which LHCI's v6.5 provides.
   allowedVersions:
     proxy-agent: ">=6.5.0"
+
+patchedDependencies:
+  minimatch@11.0.3: patches/minimatch@11.0.3.patch
