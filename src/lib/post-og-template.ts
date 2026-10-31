@@ -39,7 +39,7 @@ export function PostOgTemplate({ title, createdAt, tags = [] }: PostOgData) {
 
   return restoreText(html`
     <div
-      style="position: relative; height: 100%; width: 100%; display: flex; flex-direction: column; justify-content: space-between; padding: 60px; background-color: #fff; color: #0f172a; font-size: 32px; font-weight: 400; font-family: 'Google Sans', 'Google Sans Extended', sans-serif; font-feature-settings: 'liga' 1, 'calt' 1;"
+      style="position: relative; box-sizing: border-box; height: 100%; width: 100%; display: flex; flex-direction: column; justify-content: space-between; padding: 60px; background-color: #fff; color: #0f172a; font-size: 32px; font-weight: 400; font-family: 'Google Sans', 'Google Sans Extended', sans-serif; font-feature-settings: 'liga' 1, 'calt' 1;"
     >
       <div
         style="display: flex; flex-direction: row; gap: 40px; align-items: center; flex-shrink: 0;"
@@ -52,7 +52,7 @@ export function PostOgTemplate({ title, createdAt, tags = [] }: PostOgData) {
       >
         <div
           data-og-title
-          style="display: block; max-width: 100%; padding: 4px; font-size: ${fontSize}px; font-weight: 700; line-height: 1.125; text-align: center; word-break: break-word; line-clamp: ${titleLines}; overflow: hidden; text-overflow: ellipsis;"
+          style="display: block; box-sizing: border-box; max-width: 100%; padding: 4px; font-size: ${fontSize}px; font-weight: 700; line-height: 1.125; text-align: center; word-break: break-word; line-clamp: ${titleLines}; overflow: hidden; text-overflow: ellipsis;"
         >
           ${title}
         </div>
