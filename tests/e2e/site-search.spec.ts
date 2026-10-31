@@ -46,6 +46,41 @@ async function enableDetailedView(page: Page) {
   await expect(page.locator("html")).toHaveAttribute("data-home-detail-view", "true");
 }
 
+test("preserves a sort control focused as the search dialog finishes opening", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await gotoRoute(page, "/");
+  await enableDetailedView(page);
+  await page.locator(".site-motion-trigger").click();
+  await expect(page.locator("html")).toHaveAttribute("data-motion", "on");
+  await warmSearch(page);
+  const dialog = page.locator("[data-search-dialog]");
+  const sort = dialog.locator("[data-sort-select]");
+
+  await dialog.evaluate((element) => {
+    element.addEventListener(
+      "opened",
+      () => element.querySelector<HTMLElement>("[data-sort-select]")!.focus(),
+      { once: true },
+    );
+  });
+  await page.locator("[data-search-open]").click();
+  await expect(dialog).toHaveJSProperty("open", true);
+  await expect(page.locator("[data-search-open]")).toBeEnabled();
+  // Allow the opening sequence's deferred work to run before checking that it
+  // has not stolen a user's choice of control at the end of the animation.
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        );
+      }),
+  );
+  await expect.poll(() => sort.evaluate((element) => element.matches(":focus-within"))).toBe(true);
+  await openMaterialSelect(sort);
+  await expect(sort).toHaveJSProperty("open", true);
+});
+
 test("dims scroll-to-top beneath the search scrim and restores it after closing", async ({
   page,
 }) => {
