@@ -18,7 +18,7 @@ en Markdown ou MDX et l'interface utilise Material Web.
 
 ## Démarrage rapide
 
-Les versions de référence sont Node.js `22.22.3` et pnpm `11.1.3`. Volta peut les sélectionner
+Les versions de référence sont Node.js `22.23.4` et pnpm `11.1.3`. Volta peut les sélectionner
 automatiquement à partir de `package.json`.
 
 ```sh
