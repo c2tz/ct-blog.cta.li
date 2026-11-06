@@ -64,7 +64,7 @@
     "@mux/mux-player": "3.14.1",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
-    "astro": "^7.4.4",
+    "astro": "^7.4.6",
     "fonteditor-core": "^2.6.3",
     "media-chrome": "4.19.4",
     "rehype-autolink-headings": "^7.1.0",
