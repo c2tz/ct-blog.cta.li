@@ -12,23 +12,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+          ref: fc76346dc77cba5f898ebc75e00d4dcad5c597d3
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version-file: package.json
-      - name: Compare direct dependency versions
+      - name: Refresh compatible versions from registry inventory
         shell: bash
         run: |
-          rc=0
-          pnpm outdated --format json > /tmp/blog-outdated.json || rc=$?
-          test "$rc" -le 1
-          echo BLOG_INVENTORY_BEGIN
-          cat /tmp/blog-outdated.json
-          echo BLOG_INVENTORY_END
-      - name: Resolve verified current TypeScript ESLint update
-        shell: bash
-        run: |
-          pnpm up typescript-eslint@8.74.0 --lockfile-only --ignore-scripts
+          pnpm up '@commitlint/cli@^21.2.4' '@commitlint/config-conventional@^21.2.4' 'lint-staged@^17.6.2' 'parse5@^8.1.1' '@vercel/speed-insights@^2.1.0' 'knip@6.48.0' 'pagefind@^1.6.0' --lockfile-only --ignore-scripts
           echo BLOG_PATCH_BEGIN
           git --no-pager diff --no-color -- package.json pnpm-lock.yaml
           echo BLOG_PATCH_END
