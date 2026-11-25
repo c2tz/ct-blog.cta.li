@@ -1,41 +1,24 @@
-name: Test standard Material Symbols subset regeneration
+name: Blog post-deployment HTTP smoke
 on:
   push:
     branches: [maintenance/blog-registry-scratch-20261125]
-permissions:
-  contents: read
+permissions: {}
 jobs:
-  symbols:
+  smoke-production:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 3
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          persist-credentials: false
-          ref: 420daa136cbc069ab62affbf0f0528de77e7d430
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
-        with:
-          node-version-file: package.json
-      - name: Check the new glyph against the pinned production font source
+      - name: Verify the public production response without bypass
         shell: bash
         run: |
-          cp src/generated/material-symbol-codepoints.json /tmp/old-blog-symbols.json
-          pnpm up 'material-symbols@^0.49.0' --lockfile-only --ignore-scripts
-          pnpm install --frozen-lockfile --ignore-scripts
-          pnpm update:material-symbol-map
-          pnpm exec prettier --write src/generated/material-symbol-codepoints.json
-          node --input-type=module <<'JS'
-          import fs from 'node:fs';
-          const read = path => JSON.parse(fs.readFileSync(path, 'utf8'));
-          const before = read('/tmp/old-blog-symbols.json');
-          const after = read('src/generated/material-symbol-codepoints.json');
-          const changes = Object.keys(before).filter(name => before[name] !== after[name]).map(name => ({name, old: before[name], replacement: after[name]}));
-          console.log(JSON.stringify(changes));
-          JS
-          pnpm update:material-symbols
-          pnpm check:material-symbols
-          pnpm exec prettier --write public/fonts/material-symbols-rounded-subset.codepoints.json
-          echo BLOG_SYMBOLS_PATCH_BEGIN
-          git --no-pager diff --binary --no-color -- package.json pnpm-lock.yaml src/generated/material-symbol-codepoints.json src/assets/css/base/fonts.scss public/fonts/material-symbols-rounded-subset.codepoints.json public/fonts/material-symbols-rounded-subset.woff2
-          echo BLOG_SYMBOLS_PATCH_END
+          set -euo pipefail
+          origin=https://ct-blog.cta.li
+          status=$(curl --proto '=https' --connect-timeout 10 --max-time 25 --silent --show-error -D /tmp/blog-home-headers -o /tmp/blog-home -w '%{http_code}' "$origin/")
+          echo "GET /: HTTP $status"
+          grep -Ei '^(content-type|server|x-vercel-mitigated|x-vercel-id|x-vercel-cache):' /tmp/blog-home-headers || true
+          test "$status" = 200
+          grep -Eiq '<html([[:space:]>])' /tmp/blog-home
+          status=$(curl --proto '=https' --connect-timeout 10 --max-time 25 --silent --show-error -o /tmp/blog-robots -w '%{http_code}' "$origin/robots.txt")
+          echo "GET /robots.txt: HTTP $status"
+          test "$status" = 200
+          grep -q '^User-agent:' /tmp/blog-robots
