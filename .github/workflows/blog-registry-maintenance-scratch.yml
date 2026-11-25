@@ -1,23 +1,44 @@
-name: Blog production HTTP smoke
+name: Verify Material Symbols upgrade in isolation
 on:
   push:
     branches: [maintenance/blog-registry-scratch-20261125]
-permissions: {}
+permissions:
+  contents: read
 jobs:
-  smoke-production:
+  symbols:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 10
     steps:
-      - name: Verify public homepage and robots response
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          ref: 420daa136cbc069ab62affbf0f0528de77e7d430
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: package.json
+      - name: Resolve Material Symbols and regenerate the glyph map
         shell: bash
         run: |
-          set -euo pipefail
-          origin=https://ct-blog.cta.li
-          curl --proto '=https' --connect-timeout 10 --max-time 25 --fail --silent --show-error -D /tmp/blog-home-headers -o /tmp/blog-home "$origin/"
-          grep -E '^HTTP/' /tmp/blog-home-headers | tail -1
-          grep -Ei '^content-type: text/html' /tmp/blog-home-headers
-          grep -Eiq '<html([[:space:]>])' /tmp/blog-home
-          curl --proto '=https' --connect-timeout 10 --max-time 25 --fail --silent --show-error -D /tmp/blog-robots-headers -o /tmp/blog-robots "$origin/robots.txt"
-          grep -E '^HTTP/' /tmp/blog-robots-headers | tail -1
-          grep -q '^User-agent:' /tmp/blog-robots
-          echo "Blog homepage returned HTML; robots.txt responded as expected."
+          cp src/generated/material-symbol-codepoints.json /tmp/old-blog-symbols.json
+          pnpm up 'material-symbols@^0.49.0' --lockfile-only --ignore-scripts
+          pnpm install --frozen-lockfile --ignore-scripts
+          pnpm update:material-symbol-map
+          pnpm exec prettier --write src/generated/material-symbol-codepoints.json
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const read = path => JSON.parse(fs.readFileSync(path, 'utf8'));
+          const before = read('/tmp/old-blog-symbols.json');
+          const after = read('src/generated/material-symbol-codepoints.json');
+          const usedPoints = new Set(read('public/fonts/material-symbols-rounded-subset.codepoints.json').codePoints);
+          const changed = Object.keys(before).filter(name => before[name] !== after[name]);
+          const used = changed.filter(name => usedPoints.has(before[name]));
+          const added = Object.keys(after).filter(name => !(name in before));
+          console.log(JSON.stringify({ existing: Object.keys(before).length, new: Object.keys(after).length, added: added.length, changed: changed.length, changedInSubset: used }));
+          assert.equal(used.length, 0, 'The upgraded map must preserve all named codepoints available in the production subset');
+          JS
+          pnpm check:material-symbols
+          echo BLOG_SYMBOLS_PATCH_BEGIN
+          git --no-pager diff --no-color -- package.json pnpm-lock.yaml src/generated/material-symbol-codepoints.json
+          echo BLOG_SYMBOLS_PATCH_END
