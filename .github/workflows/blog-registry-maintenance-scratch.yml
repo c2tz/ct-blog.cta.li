@@ -1,26 +1,23 @@
-name: Blog registry maintenance snapshot
+name: Blog production HTTP smoke
 on:
   push:
     branches: [maintenance/blog-registry-scratch-20261125]
-permissions:
-  contents: read
+permissions: {}
 jobs:
-  dependency-inventory:
+  smoke-production:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 3
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          persist-credentials: false
-          ref: fc76346dc77cba5f898ebc75e00d4dcad5c597d3
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
-        with:
-          node-version-file: package.json
-      - name: Refresh compatible versions from registry inventory
+      - name: Verify public homepage and robots response
         shell: bash
         run: |
-          pnpm up '@commitlint/cli@^21.2.4' '@commitlint/config-conventional@^21.2.4' 'lint-staged@^17.6.2' 'parse5@^8.1.1' '@vercel/speed-insights@^2.1.0' 'knip@6.48.0' 'pagefind@^1.6.0' --lockfile-only --ignore-scripts
-          echo BLOG_PATCH_BEGIN
-          git --no-pager diff --no-color -- package.json pnpm-lock.yaml
-          echo BLOG_PATCH_END
+          set -euo pipefail
+          origin=https://ct-blog.cta.li
+          curl --proto '=https' --connect-timeout 10 --max-time 25 --fail --silent --show-error -D /tmp/blog-home-headers -o /tmp/blog-home "$origin/"
+          grep -E '^HTTP/' /tmp/blog-home-headers | tail -1
+          grep -Ei '^content-type: text/html' /tmp/blog-home-headers
+          grep -Eiq '<html([[:space:]>])' /tmp/blog-home
+          curl --proto '=https' --connect-timeout 10 --max-time 25 --fail --silent --show-error -D /tmp/blog-robots-headers -o /tmp/blog-robots "$origin/robots.txt"
+          grep -E '^HTTP/' /tmp/blog-robots-headers | tail -1
+          grep -q '^User-agent:' /tmp/blog-robots
+          echo "Blog homepage returned HTML; robots.txt responded as expected."
