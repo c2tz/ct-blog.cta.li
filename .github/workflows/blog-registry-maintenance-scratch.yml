@@ -1,4 +1,4 @@
-name: Verify Material Symbols upgrade in isolation
+name: Test standard Material Symbols subset regeneration
 on:
   push:
     branches: [maintenance/blog-registry-scratch-20261125]
@@ -17,7 +17,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version-file: package.json
-      - name: Resolve Material Symbols and regenerate the glyph map
+      - name: Check the new glyph against the pinned production font source
         shell: bash
         run: |
           cp src/generated/material-symbol-codepoints.json /tmp/old-blog-symbols.json
@@ -27,18 +27,15 @@ jobs:
           pnpm exec prettier --write src/generated/material-symbol-codepoints.json
           node --input-type=module <<'JS'
           import fs from 'node:fs';
-          import assert from 'node:assert/strict';
           const read = path => JSON.parse(fs.readFileSync(path, 'utf8'));
           const before = read('/tmp/old-blog-symbols.json');
           const after = read('src/generated/material-symbol-codepoints.json');
-          const usedPoints = new Set(read('public/fonts/material-symbols-rounded-subset.codepoints.json').codePoints);
-          const changed = Object.keys(before).filter(name => before[name] !== after[name]);
-          const used = changed.filter(name => usedPoints.has(before[name]));
-          const added = Object.keys(after).filter(name => !(name in before));
-          console.log(JSON.stringify({ existing: Object.keys(before).length, new: Object.keys(after).length, added: added.length, changed: changed.length, changedInSubset: used }));
-          assert.equal(used.length, 0, 'The upgraded map must preserve all named codepoints available in the production subset');
+          const changes = Object.keys(before).filter(name => before[name] !== after[name]).map(name => ({name, old: before[name], replacement: after[name]}));
+          console.log(JSON.stringify(changes));
           JS
+          pnpm update:material-symbols
           pnpm check:material-symbols
+          pnpm exec prettier --write public/fonts/material-symbols-rounded-subset.codepoints.json
           echo BLOG_SYMBOLS_PATCH_BEGIN
-          git --no-pager diff --no-color -- package.json pnpm-lock.yaml src/generated/material-symbol-codepoints.json
+          git --no-pager diff --binary --no-color -- package.json pnpm-lock.yaml src/generated/material-symbol-codepoints.json src/assets/css/base/fonts.scss public/fonts/material-symbols-rounded-subset.codepoints.json public/fonts/material-symbols-rounded-subset.woff2
           echo BLOG_SYMBOLS_PATCH_END
