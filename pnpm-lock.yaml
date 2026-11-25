@@ -61,8 +61,8 @@ importers:
         specifier: ^2.6.3
         version: 2.6.3
       media-chrome:
-        specifier: 4.19.4
-        version: 4.19.4(react@19.2.8)
+        specifier: 4.19.5
+        version: 4.19.5(react@19.2.8)
       rehype-autolink-headings:
         specifier: ^7.1.0
         version: 7.1.0
@@ -3769,8 +3769,8 @@ packages:
   mdn-data@2.27.1:
     resolution: {integrity: sha512-9Yubnt3e8A0OKwxYSXyhLymGW4sCufcLG6VdiDdUGVkPhpqLxlvP5vl1983gQjJl3tqbrM731mjaZaP68AgosQ==}
 
-  media-chrome@4.19.4:
-    resolution: {integrity: sha512-QAL48kT03+InLijPzXN1end9fcsl0/l53j1laCfbt/79vF2iZ45dovv4wQMw2q9zOLEiDwWsB718NJPhtZUBDg==}
+  media-chrome@4.19.5:
+    resolution: {integrity: sha512-iMn1PJsQrgkgBoKLkxVKiaO9c57y84rVqQzN84IXpPvVR9t62bgqVB1nKhuDND1Y1POKhSJLHXfH2+ESX0C1yg==}
 
   media-tracks@0.3.5:
     resolution: {integrity: sha512-l54rkKXlLBt3ob3zOLWHcnjvwUmX5bNEZ70igyapOZZC9imzqBmq1oz8p2roiV04KhjblFIi2hetLPF1oYVLRA==}
@@ -6223,7 +6223,7 @@ snapshots:
     dependencies:
       '@mux/mux-video': 0.31.6
       '@mux/playback-core': 0.36.1
-      media-chrome: 4.19.4(react@19.2.8)
+      media-chrome: 4.19.5(react@19.2.8)
       player.style: 0.3.5(react@19.2.8)
     transitivePeerDependencies:
       - react
@@ -9152,7 +9152,7 @@ snapshots:
 
   mdn-data@2.27.1: {}
 
-  media-chrome@4.19.4(react@19.2.8):
+  media-chrome@4.19.5(react@19.2.8):
     dependencies:
       ce-la-react: 0.3.2(react@19.2.8)
     transitivePeerDependencies:
@@ -9827,7 +9827,7 @@ snapshots:
 
   player.style@0.3.5(react@19.2.8):
     dependencies:
-      media-chrome: 4.19.4(react@19.2.8)
+      media-chrome: 4.19.5(react@19.2.8)
     transitivePeerDependencies:
       - react
 
