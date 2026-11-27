@@ -63,7 +63,7 @@
     "@material/web": "2.5.0",
     "@mux/mux-player": "3.14.1",
     "@vercel/analytics": "^2.0.1",
-    "@vercel/speed-insights": "^2.1.0",
+    "@vercel/speed-insights": "^2.1.1",
     "astro": "^7.4.13",
     "fonteditor-core": "^2.6.3",
     "media-chrome": "4.19.5",

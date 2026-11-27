@@ -52,8 +52,8 @@ importers:
         specifier: ^2.0.1
         version: 2.0.1(react@19.2.8)
       '@vercel/speed-insights':
-        specifier: ^2.1.0
-        version: 2.1.0(react@19.2.8)
+        specifier: ^2.1.1
+        version: 2.1.1(react@19.2.8)
       astro:
         specifier: ^7.4.13
         version: 7.4.13(@astrojs/markdown-remark@7.3.10)(@types/node@22.20.5)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.108.2)(terser@5.50.0)(tsx@4.23.15)(yaml@2.9.1)
@@ -2073,8 +2073,8 @@ packages:
       vue-router:
         optional: true
 
-  '@vercel/speed-insights@2.1.0':
-    resolution: {integrity: sha512-tkDiIEjjmlwPpTFnOK14hBhsRLMo5yoCeK2Er3AHWlL7WTzHgFSyItps3TOW0HukErUlYlaUeHiVLCyfiE4WAA==}
+  '@vercel/speed-insights@2.1.1':
+    resolution: {integrity: sha512-gaaFVQ4Rv5IfuGU5qpvN1h+A+XvezAJZOMHAziapyWqLPzq3dmS+hUNeuAJcD55zUYAfrJIMTbSh39+xElp0+Q==}
     peerDependencies:
       '@sveltejs/kit': ^1 || ^2 || ^3 || ^3.0.0-next.0
       next: '>= 13'
@@ -2082,7 +2082,7 @@ packages:
       react: ^18 || ^19 || ^19.0.0-rc
       svelte: '>= 4'
       vue: ^3
-      vue-router: ^4
+      vue-router: ^4 || ^5
     peerDependenciesMeta:
       '@sveltejs/kit':
         optional: true
@@ -7061,7 +7061,7 @@ snapshots:
     optionalDependencies:
       react: 19.2.8
 
-  '@vercel/speed-insights@2.1.0(react@19.2.8)':
+  '@vercel/speed-insights@2.1.1(react@19.2.8)':
     optionalDependencies:
       react: 19.2.8
 
